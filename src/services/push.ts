@@ -22,6 +22,10 @@ function getProjectId(): string | undefined {
 export async function registerForPushNotifications(
   uid: string,
 ): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return null;
+  }
+
   if (isExpoGo) {
     console.log(
       '[push] Running in Expo Go — push registration skipped. Build a development build to enable push.',

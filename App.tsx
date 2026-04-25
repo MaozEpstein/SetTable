@@ -9,6 +9,7 @@ import {
   Heebo_700Bold,
   useFonts,
 } from '@expo-google-fonts/heebo';
+import { WebFrame } from './src/components/WebFrame';
 import { UserProvider } from './src/context/UserContext';
 import { isFirebaseConfigured } from './src/firebase';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -64,9 +65,11 @@ export default function App() {
     return (
       <GestureHandlerRootView style={styles.flex}>
         <SafeAreaProvider>
+        <WebFrame>
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
+        </WebFrame>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );
@@ -76,7 +79,9 @@ export default function App() {
     return (
       <GestureHandlerRootView style={styles.flex}>
         <SafeAreaProvider>
+        <WebFrame>
         <FirebaseSetupScreen />
+        </WebFrame>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );
@@ -86,7 +91,9 @@ export default function App() {
     return (
       <GestureHandlerRootView style={styles.flex}>
         <SafeAreaProvider>
+        <WebFrame>
         <OnboardingScreen onComplete={(name) => setUserName(name)} />
+        </WebFrame>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );
@@ -96,9 +103,11 @@ export default function App() {
     return (
       <GestureHandlerRootView style={styles.flex}>
         <SafeAreaProvider>
+        <WebFrame>
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
+        </WebFrame>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );
@@ -108,9 +117,11 @@ export default function App() {
     return (
       <GestureHandlerRootView style={styles.flex}>
         <SafeAreaProvider>
+        <WebFrame>
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
+        </WebFrame>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );
@@ -128,14 +139,16 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <UserProvider
-        uid={uid}
-        userName={userName}
-        setUserName={handleSetUserName}
-        signOut={handleSignOut}
-      >
-        <RootNavigator />
-      </UserProvider>
+      <WebFrame>
+        <UserProvider
+          uid={uid}
+          userName={userName}
+          setUserName={handleSetUserName}
+          signOut={handleSignOut}
+        >
+          <RootNavigator />
+        </UserProvider>
+      </WebFrame>
     </SafeAreaProvider>
   );
 }

@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { getApps, initializeApp } from 'firebase/app';
 import {
+  browserLocalPersistence,
+  getAuth,
   // @ts-expect-error -- exported from firebase/auth only in React Native builds; Metro resolves it at runtime, TypeScript sees the web types.
   getReactNativePersistence,
   initializeAuth,
@@ -23,8 +26,9 @@ export const isFirebaseConfigured =
 
 export const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+export const auth =
+  Platform.OS === 'web'
+    ? initializeAuth(app, { persistence: browserLocalPersistence })
+    : initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
 
 export const db = getFirestore(app);

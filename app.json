@@ -24,7 +24,16 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "שולחן ערוך",
+      "shortName": "שולחן ערוך",
+      "lang": "he",
+      "themeColor": "#C9943B",
+      "backgroundColor": "#FBF7F0",
+      "display": "standalone",
+      "orientation": "portrait",
+      "startUrl": "/",
+      "bundler": "metro"
     },
     "extra": {
       "eas": {}
