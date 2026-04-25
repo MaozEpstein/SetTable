@@ -101,6 +101,56 @@ npx expo start
 
 ## רעיונות לפיתוח עתידי
 
+### 🌐 הפצה דו-ראשית: APK לאנדרואיד + PWA לאייפון/מחשב
+**המוטיבציה:** רוב המשפחה באנדרואיד אבל יש בני משפחה עם אייפון. Apple דורשים $99/שנה לאפליקציה native אמיתית. הפתרון החינמי: לבנות גרסת web (PWA) ש"מתחזה" לאפליקציה — מקבלת אייקון על מסך הבית, רצה במצב fullscreen, מסונכרנת בזמן אמת עם הגרסה הנייטיב דרך אותה Firebase.
+
+**ארכיטקטורה:**
+```
+Firebase (אותה דאטה)
+    ├── Android native (APK דרך EAS Build)
+    └── PWA web (Firebase Hosting)
+            └── אייפון, מחשב, גם אנדרואיד אם רוצים
+```
+
+**שלבי מימוש:**
+1. **התקנת web stack:**
+   ```bash
+   npx expo install react-native-web react-dom @expo/metro-runtime
+   ```
+2. **Wrappers ל-components לא תואמים:**
+   - `react-native-gesture-handler` — fallback ל-`onPress` רגיל ב-web (אין pinch zoom ב-web אבל הדפדפן נותן את זה native)
+   - `expo-image-picker` — להחליף ב-`<input type="file">` ב-web
+   - `expo-clipboard` — להשתמש ב-`navigator.clipboard` ב-web
+   - `expo-sharing` — להשתמש ב-Web Share API ב-web
+   - `react-native-async-storage` — מעובד אוטומטית ל-localStorage דרך RN-Web
+   - `expo-notifications` — לא נתמך ב-iOS PWA, צריך fallback (or skip)
+3. **בדיקת אופי web:**
+   ```bash
+   npx expo start --web
+   ```
+4. **בנייה לפרודקשן:**
+   ```bash
+   npx expo export --platform web
+   ```
+5. **פריסה ל-Firebase Hosting:**
+   ```bash
+   npm install -g firebase-tools
+   firebase login
+   firebase init hosting
+   firebase deploy
+   ```
+6. **הפצה למשתמשים:**
+   - שיתוף URL `https://shulchan-aruch.web.app`
+   - אייפון: Safari → "שתף" → "הוסף למסך הבית"
+   - אנדרואיד native: בנייה דרך `eas build --profile preview --platform android` והעברת APK
+
+**עלויות:** 0 ש"ח חד-פעמי, 0 ש"ח חודשי (בתוך free-tier של Firebase Hosting + Spark plan).
+
+**מגבלות PWA באייפון:**
+- Push notifications: רק מ-iOS 16.4+ ורק אחרי "הוסף למסך הבית"
+- חוויית fullscreen קצת פחות חלקה מ-native
+- ביצועים ~10-20% איטיים יותר מ-native
+
 ### 🛒 רשימת קניות אוטומטית
 אגרגציה של כל המצרכים מהמתכונים של מאכלים שמשובצים לארוחות → רשימת קניות אחת מסוננת לפי סופר/קטגוריה.
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { AddFoodToSlotModal } from './AddFoodToSlotModal';
 import { AddMealSlotModal } from './AddMealSlotModal';
 import { AssigneePickerModal } from './AssigneePickerModal';
@@ -13,6 +13,7 @@ import { deleteAssignment, setDone } from '../services/assignments';
 import { removeCustomSlot } from '../services/groups';
 import { archiveAndClearAssignments } from '../services/history';
 import { getHebrewContext } from '../utils/hebrewCalendar';
+import { buildShareText } from '../utils/shareShabbatPlan';
 import { PrimaryButton } from './PrimaryButton';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
@@ -40,6 +41,7 @@ export function MealsTab({ group }: Props) {
   const groupId = group.id;
   const { uid, userName } = useUser();
   const [endingShabbat, setEndingShabbat] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const { assignments, loading: loadingAssignments } = useAssignments(groupId);
   const { foods } = useFoods(groupId);
 
@@ -181,6 +183,37 @@ export function MealsTab({ group }: Props) {
         categoryLabels,
       };
     });
+  };
+
+  const handleShare = async () => {
+    if (sharing) return;
+    if (assignments.length === 0) {
+      Alert.alert(
+        'אין תכנון לשתף',
+        'הוסף מאכלים לארוחות לפני שתשתף את התכנון.',
+      );
+      return;
+    }
+    setSharing(true);
+    try {
+      const text = buildShareText({
+        group,
+        assignments,
+        foodsById,
+        slotByKey,
+        assigneeById,
+        slots,
+      });
+      await Share.share({
+        message: text,
+        title: `תכנון שבת — ${group.name}`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
+      Alert.alert('אופס', `לא הצלחנו לשתף.\n${message}`);
+    } finally {
+      setSharing(false);
+    }
   };
 
   const handleEndShabbat = () => {
@@ -349,18 +382,30 @@ export function MealsTab({ group }: Props) {
       )}
 
       {assignments.length > 0 && (
-        <View style={styles.endShabbatSection}>
-          <PrimaryButton
-            label="🕯️ סיום שבת/חג — נקה ארוחות"
-            variant="outline"
-            onPress={handleEndShabbat}
-            loading={endingShabbat}
-          />
-          <Text style={styles.endShabbatHint}>
-            השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" לפני הניקוי.
-            הארכיון יתויג כשבת/חג לפי היום בשבוע.
-          </Text>
-        </View>
+        <>
+          <View style={styles.shareSection}>
+            <PrimaryButton
+              label="📤 שתף תכנון לוואטסאפ"
+              onPress={handleShare}
+              loading={sharing}
+            />
+            <Text style={styles.endShabbatHint}>
+              ייפתח חלון שיתוף — בחר WhatsApp או כל אפליקציה אחרת
+            </Text>
+          </View>
+          <View style={styles.endShabbatSection}>
+            <PrimaryButton
+              label="🕯️ סיום שבת/חג — נקה ארוחות"
+              variant="outline"
+              onPress={handleEndShabbat}
+              loading={endingShabbat}
+            />
+            <Text style={styles.endShabbatHint}>
+              השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" לפני הניקוי.
+              הארכיון יתויג כשבת/חג לפי היום בשבוע.
+            </Text>
+          </View>
+        </>
       )}
     </View>
   );
@@ -756,11 +801,15 @@ const styles = StyleSheet.create({
     color: colors.warning,
     fontStyle: 'italic',
   },
-  endShabbatSection: {
+  shareSection: {
     marginTop: spacing.xl,
     paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    gap: spacing.xs,
+  },
+  endShabbatSection: {
+    marginTop: spacing.lg,
     gap: spacing.xs,
   },
   endShabbatHint: {
