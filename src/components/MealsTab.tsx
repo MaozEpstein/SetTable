@@ -15,6 +15,8 @@ import { archiveAndClearAssignments } from '../services/history';
 import { PrimaryButton } from './PrimaryButton';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
+  detectEventType,
+  eventLabel,
   getAllAssignees,
   getAllCategories,
   getAllSlots,
@@ -184,17 +186,19 @@ export function MealsTab({ group }: Props) {
     if (assignments.length === 0) {
       Alert.alert(
         'אין מה לארכב',
-        'אין שיבוצים פעילים לארוחות בכלל. הוסף מאכלים לארוחות לפני שתסיים שבת.',
+        'אין שיבוצים פעילים. הוסף מאכלים לארוחות לפני סיום שבת/חג.',
       );
       return;
     }
+    const detectedType = detectEventType(Date.now());
+    const detectedLabel = eventLabel(detectedType); // "שבת" / "חג"
     Alert.alert(
-      '🕯️ שבת הסתיימה',
-      `האם אתה בטוח?\n\n${assignments.length} השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" וכל הארוחות יתאפסו.\n\nהמאכלים בקטלוג, החברים, הקטגוריות והסעודות המותאמות יישארו ללא שינוי.`,
+      `🕯️ סיום ${detectedLabel}`,
+      `מזוהה כ-${detectedLabel} (לפי היום בשבוע).\n\n${assignments.length} השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" וכל הארוחות יתאפסו.\n\nהמאכלים בקטלוג, החברים, הקטגוריות והסעודות המותאמות יישארו ללא שינוי.`,
       [
         { text: 'ביטול', style: 'cancel' },
         {
-          text: 'כן, נקה ארוחות',
+          text: `כן, סיום ${detectedLabel}`,
           style: 'destructive',
           onPress: async () => {
             setEndingShabbat(true);
@@ -207,8 +211,8 @@ export function MealsTab({ group }: Props) {
                 assignments: snapshot,
               });
               Alert.alert(
-                'נקה בהצלחה ✓',
-                `נשמרו ${snapshot.length} שיבוצים בהיסטוריה. שבת חדשה — מתחילים מחדש.`,
+                'נשמר בהצלחה ✓',
+                `נשמרו ${snapshot.length} שיבוצים ב-${detectedLabel} בהיסטוריה. ${detectedLabel === 'שבת' ? 'שבת חדשה' : 'חג חדש'} — מתחילים מחדש.`,
               );
             } catch (err) {
               const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
@@ -332,13 +336,14 @@ export function MealsTab({ group }: Props) {
       {assignments.length > 0 && (
         <View style={styles.endShabbatSection}>
           <PrimaryButton
-            label="🕯️ שבת הסתיימה — נקה ארוחות"
+            label="🕯️ סיום שבת/חג — נקה ארוחות"
             variant="outline"
             onPress={handleEndShabbat}
             loading={endingShabbat}
           />
           <Text style={styles.endShabbatHint}>
-            השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" לפני הניקוי
+            השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" לפני הניקוי.
+            הארכיון יתויג כשבת/חג לפי היום בשבוע.
           </Text>
         </View>
       )}

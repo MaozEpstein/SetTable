@@ -84,6 +84,8 @@ export type ArchivedAssignment = {
   categoryLabels: string[];
 };
 
+export type EventType = 'shabbat' | 'holiday';
+
 export type ShabbatHistoryEntry = {
   id: string;
   archivedAt: number;
@@ -91,7 +93,24 @@ export type ShabbatHistoryEntry = {
   archivedByName: string;
   assignmentCount: number;
   assignments: ArchivedAssignment[];
+  eventType?: EventType; // older entries may not have this — fall back to date heuristic
 };
+
+// Friday/Saturday/Sunday → assume the user is wrapping up Shabbat
+// (Friday afternoon, Saturday night, or Sunday morning).
+// Mon–Thu → assume it's a חג (holiday) that just ended.
+export function detectEventType(ts: number): EventType {
+  const day = new Date(ts).getDay(); // 0=Sun, 5=Fri, 6=Sat
+  return day === 0 || day === 5 || day === 6 ? 'shabbat' : 'holiday';
+}
+
+export function eventTypeOf(entry: Pick<ShabbatHistoryEntry, 'eventType' | 'archivedAt'>): EventType {
+  return entry.eventType ?? detectEventType(entry.archivedAt);
+}
+
+export function eventLabel(type: EventType): string {
+  return type === 'shabbat' ? 'שבת' : 'חג';
+}
 
 export type Group = {
   id: string;

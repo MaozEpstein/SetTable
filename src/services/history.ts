@@ -11,7 +11,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { ArchivedAssignment, ShabbatHistoryEntry } from '../types';
+import { detectEventType, type ArchivedAssignment, type ShabbatHistoryEntry } from '../types';
 
 function historyCol(groupId: string) {
   return collection(db, 'groups', groupId, 'history');
@@ -35,12 +35,14 @@ export async function archiveAndClearAssignments({
   assignments,
 }: ArchiveAndClearInput): Promise<void> {
   // 1. Snapshot the current assignments into a history doc
+  const archivedAt = Date.now();
   await addDoc(historyCol(groupId), {
-    archivedAt: Date.now(),
+    archivedAt,
     archivedBy,
     archivedByName,
     assignmentCount: assignments.length,
     assignments,
+    eventType: detectEventType(archivedAt),
   });
 
   // 2. Delete the live assignments in a single batch

@@ -3,7 +3,13 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useHistory } from '../hooks/useHistory';
 import { deleteHistoryEntry } from '../services/history';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import type { ArchivedAssignment, Group, ShabbatHistoryEntry } from '../types';
+import {
+  eventLabel,
+  eventTypeOf,
+  type ArchivedAssignment,
+  type Group,
+  type ShabbatHistoryEntry,
+} from '../types';
 
 type Props = {
   group: Group;
@@ -16,7 +22,7 @@ export function HistoryTab({ group }: Props) {
   const handleDelete = (entry: ShabbatHistoryEntry) => {
     Alert.alert(
       'מחיקת ארכיון',
-      `למחוק את הארכיון מ-${formatDate(entry.archivedAt)}?\nפעולה זו לא ניתנת לביטול.`,
+      `למחוק את הארכיון מ-${formatTitle(entry)}?\nפעולה זו לא ניתנת לביטול.`,
       [
         { text: 'ביטול', style: 'cancel' },
         {
@@ -98,7 +104,7 @@ function HistoryCard({ entry, expanded, onToggle, onLongPress }: CardProps) {
         ]}
       >
         <View style={styles.cardHeaderMain}>
-          <Text style={styles.cardTitle}>{formatDate(entry.archivedAt)}</Text>
+          <Text style={styles.cardTitle}>{formatTitle(entry)}</Text>
           <Text style={styles.cardSubtitle}>
             {entry.assignmentCount}{' '}
             {entry.assignmentCount === 1 ? 'מאכל' : 'מאכלים'}
@@ -175,14 +181,14 @@ function groupBySlot(items: ArchivedAssignment[]): Map<string, ArchivedAssignmen
   return map;
 }
 
-function formatDate(ts: number): string {
-  const d = new Date(ts);
+function formatTitle(entry: Pick<ShabbatHistoryEntry, 'eventType' | 'archivedAt'>): string {
+  const d = new Date(entry.archivedAt);
   const formatter = new Intl.DateTimeFormat('he-IL', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
   });
-  return `שבת ${formatter.format(d)}`;
+  return `${eventLabel(eventTypeOf(entry))} ${formatter.format(d)}`;
 }
 
 const styles = StyleSheet.create({

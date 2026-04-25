@@ -27,7 +27,11 @@ export function SegmentedTabs<T extends string>({ tabs, active, onChange }: Prop
               { opacity: pressed && !isActive ? 0.6 : 1 },
             ]}
           >
-            <Text style={[styles.label, isActive && styles.activeLabel]}>
+            <Text
+              style={[styles.label, isActive && styles.activeLabel]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {tab.label}
             </Text>
           </Pressable>
@@ -50,7 +54,7 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xs,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
