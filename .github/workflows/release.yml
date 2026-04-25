@@ -33,51 +33,28 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Expo prebuild (android)
         run: npx expo prebuild --platform android --no-install --non-interactive
 
       - name: Generate debug keystore
-        run: |
-          keytool -genkeypair -v \
-            -keystore android/app/debug.keystore \
-            -alias androiddebugkey \
-            -storepass android -keypass android \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
+        run: keytool -genkeypair -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Configure release signing with debug keystore
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("android/app/build.gradle")
-          s = p.read_text()
-          inject = """
-              signingConfigs {
-                  release {
-                      storeFile file('debug.keystore')
-                      storePassword 'android'
-                      keyAlias 'androiddebugkey'
-                      keyPassword 'android'
-                  }
-              }
-          """
-          if "signingConfigs {" not in s:
-              s = s.replace("android {\n", "android {\n" + inject, 1)
-          s = s.replace(
-              "signingConfig signingConfigs.debug",
-              "signingConfig signingConfigs.release",
-          )
-          p.write_text(s)
-          PY
+      - name: Patch build.gradle with release signing
+        run: node .github/scripts/patch-signing.js
 
       - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Rename APK to stable filename
-        run: cp android/app/build/outputs/apk/release/app-release.apk SetTable.apk
+      - name: Locate and rename APK
+        run: |
+          set -e
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n1)
+          echo "Found APK: $APK"
+          cp "$APK" SetTable.apk
+          ls -la SetTable.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
