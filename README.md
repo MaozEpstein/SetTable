@@ -11,6 +11,7 @@
 
 ## תכונות
 
+
 ### כניסה והרשמה
 - כניסה בשם בלבד — בלי הרשמה, בלי סיסמה, בלי קוד SMS
 - השם נשמר במכשיר ומופיע לשאר חברי הקבוצה
@@ -158,29 +159,16 @@ SetTable/
 
 ---
 
-## הוספת Firebase Storage עבור תמונות מאכלים
+## תמונות מאכלים — Cloudinary
 
-לדף המאכל יש אפשרות להוסיף תמונות. התמונות נשמרות ב-Firebase Storage.
+תמונות לדף המאכל לא נשמרות ב-Firebase (Storage דורש billing/credit-card). במקום זאת:
 
-**הפעלה ב-Firebase Console:**
-1. בתפריט בצד: Build → Storage → Get started
-2. אזור: בחר את אותו אזור כמו Firestore (בד"כ `europe-west3` או `eur3`)
-3. אבטחה: התחל ב-Production mode (אנחנו נחליף את החוקים מיד)
+- **אחסון:** Cloudinary (free tier 25GB, ללא credit card)
+- **קונפיגורציה:** ב-`src/services/cloudinary.ts` — cloud name + unsigned upload preset
+- **כיווץ לפני העלאה:** JPEG @ 0.7, רוחב מקסימלי 1024px (`expo-image-manipulator`)
+- **שמירה ב-Firestore:** ה-URL בלבד נשמר ב-`food.images` (מערך URLs)
 
-**חוקי Storage** (ב-Storage → Rules → Edit → Publish):
-
-```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /groups/{groupId}/foods/{foodId}/{fileName} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
-
-(ללא זה תקבל `permission-denied` כשתנסה להעלות תמונה. שאר האפליקציה תמשיך לעבוד רגיל.)
+**מחיקה:** Cloudinary unsigned uploads לא תומכים במחיקה מהלקוח (דורש API secret על שרת). כשמסירים תמונה מ-UI — ה-URL נמחק מ-Firestore אבל הקובץ נשאר orphan ב-Cloudinary. ב-25GB free tier זה לא מהווה בעיה לאפליקציה משפחתית.
 
 ---
 

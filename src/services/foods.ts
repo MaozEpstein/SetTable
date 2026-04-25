@@ -5,20 +5,14 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
   onSnapshot,
   orderBy,
   query,
   updateDoc,
   type Unsubscribe,
 } from 'firebase/firestore';
-import {
-  deleteObject,
-  getDownloadURL,
-  ref as storageRef,
-  uploadBytes,
-} from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
+import { uploadImageToCloudinary } from './cloudinary';
 import type { Food, FoodCategory } from '../types';
 
 function foodsCol(groupId: string) {
@@ -78,41 +72,11 @@ export async function updateFood({
 }
 
 export async function deleteFood(groupId: string, foodId: string): Promise<void> {
-  // Best-effort: also delete any uploaded images for this food
-  try {
-    const snap = await getDoc(foodDoc(groupId, foodId));
-    if (snap.exists()) {
-      const data = snap.data() as { images?: string[] };
-      const images = data.images ?? [];
-      await Promise.all(
-        images.map((url) =>
-          deleteImageByUrl(url).catch(() => {
-            /* ignore individual delete failures */
-          }),
-        ),
-      );
-    }
-  } catch {
-    /* ignore */
-  }
+  // Note: images are hosted on Cloudinary and not deleted from there
+  // (deletion needs a signed request that requires our API secret).
+  // Orphaned assets stay in Cloudinary; for a family-scale app the
+  // 25 GB free tier absorbs this comfortably.
   await deleteDoc(foodDoc(groupId, foodId));
-}
-
-async function uriToBlob(uri: string): Promise<Blob> {
-  // Use XHR for reliable blob conversion in React Native (fetch().blob()
-  // is unreliable for local file:// URIs on some platforms).
-  return new Promise<Blob>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onload = () => resolve(xhr.response as Blob);
-    xhr.onerror = () => reject(new Error('Failed to read image file'));
-    xhr.responseType = 'blob';
-    xhr.open('GET', uri, true);
-    xhr.send(null);
-  });
-}
-
-function imagePath(groupId: string, foodId: string, fileName: string): string {
-  return `groups/${groupId}/foods/${foodId}/${fileName}`;
 }
 
 export async function addImageToFood(
@@ -120,12 +84,7 @@ export async function addImageToFood(
   foodId: string,
   localUri: string,
 ): Promise<string> {
-  const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const path = imagePath(groupId, foodId, fileName);
-  const blob = await uriToBlob(localUri);
-  const ref = storageRef(storage, path);
-  await uploadBytes(ref, blob, { contentType: 'image/jpeg' });
-  const url = await getDownloadURL(ref);
+  const url = await uploadImageToCloudinary(localUri);
   await updateDoc(foodDoc(groupId, foodId), {
     images: arrayUnion(url),
     updatedAt: Date.now(),
@@ -133,29 +92,17 @@ export async function addImageToFood(
   return url;
 }
 
-async function deleteImageByUrl(url: string): Promise<void> {
-  // Firebase download URLs include the storage path encoded; use refFromURL.
-  const { ref: refFromURL } = await import('firebase/storage');
-  // refFromURL was renamed to ref(storage, url) — ref accepts a gs:// or https:// URL
-  const ref = storageRef(storage, url);
-  await deleteObject(ref);
-  void refFromURL; // avoid unused
-}
-
 export async function removeImageFromFood(
   groupId: string,
   foodId: string,
   url: string,
 ): Promise<void> {
+  // We only drop the URL from Firestore; the Cloudinary asset stays
+  // orphaned. See note in deleteFood / cloudinary.ts.
   await updateDoc(foodDoc(groupId, foodId), {
     images: arrayRemove(url),
     updatedAt: Date.now(),
   });
-  try {
-    await deleteImageByUrl(url);
-  } catch {
-    /* if storage object is gone or path doesn't match, ignore */
-  }
 }
 
 export function subscribeFoods(

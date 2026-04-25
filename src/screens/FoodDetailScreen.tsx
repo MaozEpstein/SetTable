@@ -150,27 +150,16 @@ export function FoodDetailScreen({
     setUploadingImage(true);
     try {
       const asset = result.assets[0];
-      // Resize to max 1200 wide, JPEG quality 0.7
+      // Resize to max 1024 wide, JPEG quality 0.7
       const manipulated = await ImageManipulator.manipulateAsync(
         asset.uri,
-        [{ resize: { width: 1200 } }],
+        [{ resize: { width: 1024 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
       );
       await addImageToFood(groupId, foodId, manipulated.uri);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const isStorageNotEnabled =
-        message.includes('storage/unknown') ||
-        message.includes('storage/unauthorized') ||
-        message.includes('storage/object-not-found');
-      if (isStorageNotEnabled) {
-        Alert.alert(
-          'Firebase Storage לא מוגדר',
-          'כדי להעלות תמונות צריך:\n\n1. ב-Firebase Console: Build → Storage → Get started\n2. בלשונית Rules להדביק את החוקים מה-README ולפרסם\n\n(הפרטים המלאים בקובץ README.md)',
-        );
-      } else {
-        Alert.alert('אופס', `לא הצלחנו להעלות תמונה.\n${message}`);
-      }
+      Alert.alert('אופס', `לא הצלחנו להעלות תמונה.\n${message}`);
     } finally {
       setUploadingImage(false);
     }
