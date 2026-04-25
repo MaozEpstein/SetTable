@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
+import { AddManualMemberModal } from './AddManualMemberModal';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
-import { leaveGroup } from '../services/groups';
+import { leaveGroup, removeManualMember } from '../services/groups';
 import { removeGroupId } from '../storage';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import type { Group } from '../types';
+import type { Group, ManualMember } from '../types';
 
 type Props = {
   group: Group;
@@ -18,14 +19,14 @@ export function MembersTab({ group }: Props) {
   const { uid } = useUser();
   const navigation = useNavigation();
   const [leaving, setLeaving] = useState(false);
+  const [addManualVisible, setAddManualVisible] = useState(false);
+
   const members = Object.values(group.members ?? {}).sort(
     (a, b) => a.joinedAt - b.joinedAt,
   );
-
-  const handleCopyCode = async () => {
-    await Clipboard.setStringAsync(group.code);
-    Alert.alert('הועתק ✓', `הקוד ${group.code} הועתק ללוח.`);
-  };
+  const manualMembers = (group.manualMembers ?? []).slice().sort(
+    (a, b) => a.addedAt - b.addedAt,
+  );
 
   const handleLeave = () => {
     Alert.alert(
@@ -50,6 +51,32 @@ export function MembersTab({ group }: Props) {
         },
       ],
     );
+  };
+
+  const handleRemoveManual = (member: ManualMember) => {
+    Alert.alert(
+      `הסרת "${member.name}"`,
+      'המשתתף יוסר מהקבוצה. שיבוצים שהוקצו לו יחזרו ל"טרם שובץ".',
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'הסר',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeManualMember(group.id, member.id);
+            } catch {
+              Alert.alert('אופס', 'לא הצלחנו להסיר. נסה שוב.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleCopyCode = async () => {
+    await Clipboard.setStringAsync(group.code);
+    Alert.alert('הועתק ✓', `הקוד ${group.code} הועתק ללוח.`);
   };
 
   const handleShareCode = async () => {
@@ -107,6 +134,54 @@ export function MembersTab({ group }: Props) {
         ))}
       </View>
 
+      <View style={styles.membersSection}>
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>
+            משתתפים ידניים ({manualMembers.length})
+          </Text>
+          <Pressable
+            onPress={() => setAddManualVisible(true)}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.addManualBtn,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+          >
+            <Text style={styles.addManualBtnText}>+ הוסף</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.helperText}>
+          אנשים שלא משתמשים באפליקציה אבל אתה רוצה לשבץ להם מאכלים.
+          {'\n'}
+          לחיצה ארוכה על שם להסרה.
+        </Text>
+        {manualMembers.length === 0 ? (
+          <View style={styles.emptyManual}>
+            <Text style={styles.emptyManualText}>
+              אין עדיין משתתפים ידניים. לחץ "+ הוסף" כדי להוסיף.
+            </Text>
+          </View>
+        ) : (
+          manualMembers.map((m) => (
+            <Pressable
+              key={m.id}
+              onLongPress={() => handleRemoveManual(m)}
+              style={({ pressed }) => [
+                styles.memberRow,
+                styles.manualRow,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <View style={[styles.avatar, styles.avatarManual]}>
+                <Text style={styles.avatarText}>{m.name.charAt(0)}</Text>
+              </View>
+              <Text style={styles.memberName}>{m.name}</Text>
+              <Text style={styles.manualTag}>ידני</Text>
+            </Pressable>
+          ))
+        )}
+      </View>
+
       <View style={styles.dangerSection}>
         <PrimaryButton
           label="עזוב קבוצה"
@@ -115,6 +190,12 @@ export function MembersTab({ group }: Props) {
           loading={leaving}
         />
       </View>
+
+      <AddManualMemberModal
+        visible={addManualVisible}
+        groupId={group.id}
+        onClose={() => setAddManualVisible(false)}
+      />
     </View>
   );
 }
@@ -156,11 +237,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     alignSelf: 'stretch',
   },
-  buttonHalf: {
-    flex: 1,
-  },
-  membersSection: {
-    gap: spacing.sm,
+  buttonHalf: { flex: 1 },
+  membersSection: { gap: spacing.sm },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   sectionTitle: {
     fontSize: fontSize.md,
@@ -171,6 +253,43 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  addManualBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+  },
+  addManualBtnText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bold,
+    color: colors.primary,
+    writingDirection: 'rtl',
+  },
+  helperText: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: 18,
+  },
+  emptyManual: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  emptyManualText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -178,6 +297,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     gap: spacing.md,
+  },
+  manualRow: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
   },
   avatar: {
     width: 40,
@@ -187,9 +311,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarMe: {
-    backgroundColor: colors.primary,
-  },
+  avatarMe: { backgroundColor: colors.primary },
+  avatarManual: { backgroundColor: colors.warning },
   avatarText: {
     fontSize: fontSize.lg,
     fontFamily: fontFamily.bold,
@@ -212,7 +335,14 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: radius.pill,
   },
-  dangerSection: {
-    marginTop: spacing.md,
+  manualTag: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.bold,
+    color: colors.warning,
+    backgroundColor: '#FBE6DC',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
   },
+  dangerSection: { marginTop: spacing.md },
 });

@@ -73,7 +73,7 @@ export function GroupScreen({
         keyboardShouldPersistTaps="handled"
       >
         {activeTab === 'meals' && <MealsTab group={group} />}
-        {activeTab === 'foods' && <FoodsTab groupId={group.id} />}
+        {activeTab === 'foods' && <FoodsTab group={group} />}
         {activeTab === 'members' && <MembersTab group={group} />}
       </ScrollView>
     </SafeAreaView>

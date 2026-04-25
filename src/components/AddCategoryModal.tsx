@@ -5,7 +5,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -13,29 +12,29 @@ import {
 } from 'react-native';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
-import { createFood } from '../services/foods';
+import { addCustomCategory } from '../services/groups';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import type { CategoryInfo, FoodCategory } from '../types';
+
+const EMOJI_OPTIONS = ['🍽️', '🥦', '🥖', '🍕', '🍤', '🧀', '🍪', '🌶️', '🥤', '🍯'];
 
 type Props = {
   visible: boolean;
   groupId: string;
-  categories: CategoryInfo[];
   onClose: () => void;
 };
 
-export function AddFoodModal({ visible, groupId, categories, onClose }: Props) {
+export function AddCategoryModal({ visible, groupId, onClose }: Props) {
   const { uid } = useUser();
-  const [name, setName] = useState('');
-  const [selected, setSelected] = useState<Set<FoodCategory>>(new Set());
+  const [label, setLabel] = useState('');
+  const [emoji, setEmoji] = useState(EMOJI_OPTIONS[0]);
   const [saving, setSaving] = useState(false);
 
-  const trimmed = name.trim();
-  const canSubmit = trimmed.length >= 2 && selected.size > 0 && !saving;
+  const trimmed = label.trim();
+  const canSubmit = trimmed.length >= 2 && !saving;
 
   const reset = () => {
-    setName('');
-    setSelected(new Set());
+    setLabel('');
+    setEmoji(EMOJI_OPTIONS[0]);
     setSaving(false);
   };
 
@@ -45,97 +44,65 @@ export function AddFoodModal({ visible, groupId, categories, onClose }: Props) {
     onClose();
   };
 
-  const toggleCategory = (cat: FoodCategory) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
-      return next;
-    });
-  };
-
   const handleSave = async () => {
     if (!canSubmit) return;
     setSaving(true);
     try {
-      await createFood({
-        groupId,
-        name: trimmed,
-        categories: Array.from(selected),
-        uid,
-      });
+      await addCustomCategory({ groupId, label: trimmed, emoji, uid });
       reset();
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו להוסיף את המאכל.\n${message}`);
+      Alert.alert('אופס', `לא הצלחנו להוסיף את הקטגוריה.\n${message}`);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={handleClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <Pressable style={styles.backdrop} onPress={handleClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.handle} />
-            <Text style={styles.title}>הוסף מאכל חדש</Text>
+            <Text style={styles.title}>הוסף קטגוריה חדשה</Text>
             <Text style={styles.helper}>
-              המאכל יישמר ברשימת המאכלים של הקבוצה ויהיה זמין לשיבוץ לארוחות
+              לדוגמה: דגים, מרקים, יין, רוטב
             </Text>
 
-            <Text style={styles.label}>שם המאכל</Text>
+            <Text style={styles.label}>שם הקטגוריה</Text>
             <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="לדוגמה: חמין, סלט ירקות, עוגת שוקולד"
+              value={label}
+              onChangeText={setLabel}
+              placeholder="שם הקטגוריה"
               placeholderTextColor={colors.textMuted}
               style={styles.input}
               autoFocus
-              maxLength={40}
+              maxLength={30}
               textAlign="right"
+              returnKeyType="done"
+              onSubmitEditing={handleSave}
             />
 
-            <Text style={styles.label}>
-              קטגוריות{selected.size > 0 ? ` (${selected.size})` : ''}
-            </Text>
-            <Text style={styles.subHelper}>
-              ניתן לבחור יותר מאחת — למשל אורז עם עוף שייך גם לבשר וגם לפחמימה
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chips}
-            >
-              {categories.map((cat) => {
-                const isActive = selected.has(cat.key);
+            <Text style={styles.label}>אייקון</Text>
+            <View style={styles.emojiRow}>
+              {EMOJI_OPTIONS.map((opt) => {
+                const isActive = emoji === opt;
                 return (
                   <Pressable
-                    key={cat.key}
-                    onPress={() => toggleCategory(cat.key)}
+                    key={opt}
+                    onPress={() => setEmoji(opt)}
                     style={({ pressed }) => [
-                      styles.chip,
-                      isActive && styles.chipActive,
-                      { opacity: pressed ? 0.7 : 1 },
+                      styles.emojiOption,
+                      isActive && styles.emojiOptionActive,
+                      { opacity: pressed && !isActive ? 0.6 : 1 },
                     ]}
                   >
-                    <Text style={styles.chipEmoji}>{cat.emoji}</Text>
-                    <Text style={[styles.chipLabel, isActive && styles.chipLabelActive]}>
-                      {cat.label}
-                    </Text>
-                    {isActive && <Text style={styles.chipCheck}>✓</Text>}
+                    <Text style={styles.emojiText}>{opt}</Text>
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
 
             <View style={styles.actions}>
               <View style={styles.buttonHalf}>
@@ -221,58 +188,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     writingDirection: 'rtl',
   },
-  chips: {
+  emojiRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
+  emojiOption: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    gap: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  chipActive: {
+  emojiOptionActive: {
     borderColor: colors.primary,
     backgroundColor: '#FBEFD9',
   },
-  chipEmoji: {
-    fontSize: fontSize.md,
-  },
-  chipLabel: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.medium,
-    color: colors.text,
-    writingDirection: 'rtl',
-  },
-  chipLabelActive: {
-    color: colors.primaryDark,
-    fontFamily: fontFamily.bold,
-  },
-  chipCheck: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.bold,
-    color: colors.primary,
-    marginRight: 2,
-  },
-  subHelper: {
-    fontSize: fontSize.xs,
-    fontFamily: fontFamily.regular,
-    color: colors.textMuted,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    marginBottom: spacing.xs,
-  },
+  emojiText: { fontSize: 24 },
   actions: {
     flexDirection: 'row',
     gap: spacing.sm,
     marginTop: spacing.lg,
   },
-  buttonHalf: {
-    flex: 1,
-  },
+  buttonHalf: { flex: 1 },
 });

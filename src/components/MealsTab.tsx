@@ -4,19 +4,22 @@ import { AddFoodToSlotModal } from './AddFoodToSlotModal';
 import { AddMealSlotModal } from './AddMealSlotModal';
 import { AssigneePickerModal } from './AssigneePickerModal';
 import { MealSlotTabs, type MealSubTab } from './MealSlotTabs';
+import { useUser } from '../context/UserContext';
 import { useAssignments } from '../hooks/useAssignments';
 import { useFoods } from '../hooks/useFoods';
 import { deleteAssignment, setDone } from '../services/assignments';
 import { removeCustomSlot } from '../services/groups';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
+  getAllAssignees,
+  getAllCategories,
   getAllSlots,
   getCategoryInfo,
   getFoodCategories,
   type Assignment,
+  type AssigneeInfo,
   type Food,
   type Group,
-  type Member,
   type SlotInfo,
 } from '../types';
 
@@ -26,6 +29,7 @@ type Props = {
 
 export function MealsTab({ group }: Props) {
   const groupId = group.id;
+  const { uid } = useUser();
   const { assignments, loading: loadingAssignments } = useAssignments(groupId);
   const { foods } = useFoods(groupId);
 
@@ -45,6 +49,15 @@ export function MealsTab({ group }: Props) {
     for (const s of slots) map.set(s.key, s);
     return map;
   }, [slots]);
+
+  const categories = useMemo(() => getAllCategories(group), [group]);
+
+  const assignees = useMemo(() => getAllAssignees(group, uid), [group, uid]);
+  const assigneeById = useMemo(() => {
+    const map = new Map<string, AssigneeInfo>();
+    for (const a of assignees) map.set(a.id, a);
+    return map;
+  }, [assignees]);
 
   const foodsById = useMemo(() => {
     const map = new Map<string, Food>();
@@ -70,13 +83,6 @@ export function MealsTab({ group }: Props) {
     return counts;
   }, [bySlot, slots]);
 
-  const members = Object.values(group.members ?? {});
-  const memberByUid = useMemo(() => {
-    const map = new Map<string, Member>();
-    for (const m of members) map.set(m.uid, m);
-    return map;
-  }, [members]);
-
   const handleToggleDone = (assignment: Assignment) => {
     setDone(groupId, assignment.id, !assignment.done).catch(() => {
       Alert.alert('אופס', 'לא הצלחנו לעדכן. נסה שוב.');
@@ -84,20 +90,16 @@ export function MealsTab({ group }: Props) {
   };
 
   const handleDelete = (assignment: Assignment, foodName: string) => {
-    Alert.alert(
-      'הסר שיבוץ',
-      `להסיר את "${foodName}" מהסעודה?`,
-      [
-        { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'הסר',
-          style: 'destructive',
-          onPress: () => deleteAssignment(groupId, assignment.id).catch(() => {
-            Alert.alert('אופס', 'לא הצלחנו להסיר. נסה שוב.');
-          }),
-        },
-      ],
-    );
+    Alert.alert('הסר שיבוץ', `להסיר את "${foodName}" מהסעודה?`, [
+      { text: 'ביטול', style: 'cancel' },
+      {
+        text: 'הסר',
+        style: 'destructive',
+        onPress: () => deleteAssignment(groupId, assignment.id).catch(() => {
+          Alert.alert('אופס', 'לא הצלחנו להסיר. נסה שוב.');
+        }),
+      },
+    ]);
   };
 
   const handleLongPressSlot = (slot: SlotInfo) => {
@@ -147,11 +149,12 @@ export function MealsTab({ group }: Props) {
 
       {activeSubTab === 'all' ? (
         <AllAssignmentsView
+          group={group}
           assignments={assignments}
           loading={loadingAssignments}
           foodsById={foodsById}
           slotByKey={slotByKey}
-          memberByUid={memberByUid}
+          assigneeById={assigneeById}
           onToggleDone={handleToggleDone}
           onChangeAssignee={(a, foodName) =>
             setEditingAssignment(buildEditingState(a, foodName))
@@ -163,7 +166,7 @@ export function MealsTab({ group }: Props) {
           slot={slotByKey.get(activeSubTab) ?? null}
           assignments={bySlot.get(activeSubTab) ?? []}
           foodsById={foodsById}
-          memberByUid={memberByUid}
+          assigneeById={assigneeById}
           onAdd={() => {
             const slot = slotByKey.get(activeSubTab);
             if (slot) setAddingToSlot(slot);
@@ -183,6 +186,7 @@ export function MealsTab({ group }: Props) {
           slot={addingToSlot.key}
           slotLabel={addingToSlot.label}
           slotEmoji={addingToSlot.emoji}
+          categories={categories}
           existingAssignments={bySlot.get(addingToSlot.key) ?? []}
           onClose={() => setAddingToSlot(null)}
         />
@@ -196,8 +200,8 @@ export function MealsTab({ group }: Props) {
           assignmentId={editingAssignment.id}
           foodName={editingAssignment.foodName}
           slotLabel={editingAssignment.slotLabel}
-          members={members}
-          currentAssigneeUid={editingAssignment.assignedTo}
+          assignees={assignees}
+          currentAssigneeId={editingAssignment.assignedTo}
           onClose={() => setEditingAssignment(null)}
         />
       )}
@@ -212,22 +216,24 @@ export function MealsTab({ group }: Props) {
 }
 
 type AllViewProps = {
+  group: Group;
   assignments: Assignment[];
   loading: boolean;
   foodsById: Map<string, Food>;
   slotByKey: Map<string, SlotInfo>;
-  memberByUid: Map<string, Member>;
+  assigneeById: Map<string, AssigneeInfo>;
   onToggleDone: (a: Assignment) => void;
   onChangeAssignee: (a: Assignment, foodName: string) => void;
   onLongPress: (a: Assignment, foodName: string) => void;
 };
 
 function AllAssignmentsView({
+  group,
   assignments,
   loading,
   foodsById,
   slotByKey,
-  memberByUid,
+  assigneeById,
   onToggleDone,
   onChangeAssignee,
   onLongPress,
@@ -256,11 +262,11 @@ function AllAssignmentsView({
         const slotInfo = slotByKey.get(a.slot);
         const categoryLabels = food
           ? getFoodCategories(food)
-              .map((c) => getCategoryInfo(c))
+              .map((c) => getCategoryInfo(group, c))
               .filter((info): info is NonNullable<typeof info> => info !== null)
               .map((info) => `${info.emoji} ${info.label}`)
           : [];
-        const assignee = a.assignedTo ? memberByUid.get(a.assignedTo) : null;
+        const assignee = a.assignedTo ? assigneeById.get(a.assignedTo) : null;
         return (
           <FlatAssignmentRow
             key={a.id}
@@ -285,7 +291,7 @@ type SingleViewProps = {
   slot: SlotInfo | null;
   assignments: Assignment[];
   foodsById: Map<string, Food>;
-  memberByUid: Map<string, Member>;
+  assigneeById: Map<string, AssigneeInfo>;
   onAdd: () => void;
   onToggleDone: (a: Assignment) => void;
   onChangeAssignee: (a: Assignment, foodName: string) => void;
@@ -296,7 +302,7 @@ function SingleSlotView({
   slot,
   assignments,
   foodsById,
-  memberByUid,
+  assigneeById,
   onAdd,
   onToggleDone,
   onChangeAssignee,
@@ -321,7 +327,7 @@ function SingleSlotView({
       ) : (
         assignments.map((a) => {
           const food = foodsById.get(a.foodId);
-          const assignee = a.assignedTo ? memberByUid.get(a.assignedTo) : null;
+          const assignee = a.assignedTo ? assigneeById.get(a.assignedTo) : null;
           const foodName = food?.name ?? '(מאכל נמחק)';
           return (
             <AssignmentRow
@@ -463,18 +469,10 @@ function FlatAssignmentRow({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: spacing.md,
-  },
-  flatList: {
-    gap: spacing.sm,
-  },
-  section: {
-    gap: spacing.xs,
-  },
-  sectionHeader: {
-    marginBottom: spacing.xs,
-  },
+  container: { gap: spacing.md },
+  flatList: { gap: spacing.sm },
+  section: { gap: spacing.xs },
+  sectionHeader: { marginBottom: spacing.xs },
   sectionTitle: {
     fontSize: fontSize.md,
     fontFamily: fontFamily.bold,

@@ -3,7 +3,8 @@ export type FoodCategory =
   | 'carb'
   | 'salad'
   | 'dessert'
-  | 'cake';
+  | 'cake'
+  | (string & {}); // allows custom IDs while keeping autocomplete on the defaults
 
 export type MealSlot =
   | 'friday_night'
@@ -18,7 +19,22 @@ export type Member = {
   joinedAt: number;
 };
 
+export type ManualMember = {
+  id: string;
+  name: string;
+  addedBy: string;
+  addedAt: number;
+};
+
 export type CustomMealSlot = {
+  id: string;
+  label: string;
+  emoji: string;
+  createdBy: string;
+  createdAt: number;
+};
+
+export type CustomFoodCategory = {
   id: string;
   label: string;
   emoji: string;
@@ -30,24 +46,16 @@ export type Food = {
   id: string;
   name: string;
   categories: FoodCategory[];
-  // Legacy: older docs stored a single `category`. Read-back compat only —
-  // new writes always go to `categories`. Use getFoodCategories(food).
-  category?: FoodCategory;
+  category?: FoodCategory; // legacy single field, kept for read-back compat
   createdBy: string;
   createdAt: number;
 };
 
-export function getFoodCategories(food: Food): FoodCategory[] {
-  if (food.categories?.length) return food.categories;
-  if (food.category) return [food.category];
-  return [];
-}
-
 export type Assignment = {
   id: string;
   foodId: string;
-  slot: string; // a default MealSlot key OR a custom slot id
-  assignedTo: string | null;
+  slot: string;
+  assignedTo: string | null; // a member uid OR a manualMember id OR null
   done: boolean;
   createdBy: string;
   createdAt: number;
@@ -61,6 +69,8 @@ export type Group = {
   createdAt: number;
   members: Record<string, Member>;
   customSlots?: CustomMealSlot[];
+  customCategories?: CustomFoodCategory[];
+  manualMembers?: ManualMember[];
 };
 
 export const FOOD_CATEGORIES: { key: FoodCategory; label: string; emoji: string }[] = [
@@ -112,6 +122,76 @@ export function getSlotInfo(
   return getAllSlots(group).find((s) => s.key === slotKey) ?? null;
 }
 
-export function getCategoryInfo(category: FoodCategory) {
-  return FOOD_CATEGORIES.find((c) => c.key === category) ?? null;
+export type CategoryInfo = {
+  key: string;
+  label: string;
+  emoji: string;
+  isCustom: boolean;
+};
+
+export function getAllCategories(
+  group: Pick<Group, 'customCategories'> | null,
+): CategoryInfo[] {
+  const defaults: CategoryInfo[] = FOOD_CATEGORIES.map((c) => ({
+    key: c.key as string,
+    label: c.label,
+    emoji: c.emoji,
+    isCustom: false,
+  }));
+  const custom: CategoryInfo[] = (group?.customCategories ?? []).map((c) => ({
+    key: c.id,
+    label: c.label,
+    emoji: c.emoji,
+    isCustom: true,
+  }));
+  return [...defaults, ...custom];
+}
+
+export function getCategoryInfo(
+  group: Pick<Group, 'customCategories'> | null,
+  key: string,
+): CategoryInfo | null {
+  return getAllCategories(group).find((c) => c.key === key) ?? null;
+}
+
+export function getFoodCategories(food: Food): FoodCategory[] {
+  if (food.categories?.length) return food.categories;
+  if (food.category) return [food.category];
+  return [];
+}
+
+export type AssigneeInfo = {
+  id: string;
+  name: string;
+  isManual: boolean;
+  isMe: boolean;
+};
+
+export function getAllAssignees(
+  group: Pick<Group, 'members' | 'manualMembers'> | null,
+  myUid: string | null,
+): AssigneeInfo[] {
+  if (!group) return [];
+  const members: AssigneeInfo[] = Object.values(group.members ?? {}).map((m) => ({
+    id: m.uid,
+    name: m.name,
+    isManual: false,
+    isMe: m.uid === myUid,
+  }));
+  const manuals: AssigneeInfo[] = (group.manualMembers ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    isManual: true,
+    isMe: false,
+  }));
+  return [...members, ...manuals];
+}
+
+export function getAssigneeInfo(
+  group: Pick<Group, 'members' | 'manualMembers'> | null,
+  myUid: string | null,
+  assigneeId: string | null,
+): AssigneeInfo | null {
+  if (!assigneeId || !group) return null;
+  return getAllAssignees(group, myUid).find((a) => a.id === assigneeId) ?? null;
 }

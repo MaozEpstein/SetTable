@@ -13,7 +13,7 @@ import { useUser } from '../context/UserContext';
 import { setAssignee } from '../services/assignments';
 import { sendPushNotification } from '../services/push';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import type { Member } from '../types';
+import type { AssigneeInfo } from '../types';
 
 type Props = {
   visible: boolean;
@@ -22,8 +22,8 @@ type Props = {
   assignmentId: string;
   foodName: string;
   slotLabel: string;
-  members: Member[];
-  currentAssigneeUid: string | null;
+  assignees: AssigneeInfo[];
+  currentAssigneeId: string | null;
   onClose: () => void;
 };
 
@@ -34,24 +34,24 @@ export function AssigneePickerModal({
   assignmentId,
   foodName,
   slotLabel,
-  members,
-  currentAssigneeUid,
+  assignees,
+  currentAssigneeId,
   onClose,
 }: Props) {
   const { uid, userName } = useUser();
-  const [savingUid, setSavingUid] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
-  const handlePick = async (newUid: string | null) => {
-    if (savingUid) return;
-    setSavingUid(newUid ?? '__none__');
+  const handlePick = async (newId: string | null, isManual: boolean) => {
+    if (savingId) return;
+    setSavingId(newId ?? '__none__');
     try {
-      await setAssignee(groupId, assignmentId, newUid);
+      await setAssignee(groupId, assignmentId, newId);
 
       const isAssigningOther =
-        newUid !== null && newUid !== uid && newUid !== currentAssigneeUid;
+        newId !== null && newId !== uid && newId !== currentAssigneeId && !isManual;
       if (isAssigningOther) {
         sendPushNotification({
-          toUid: newUid,
+          toUid: newId,
           title: `🕯️ שובצת בקבוצה "${groupName}"`,
           body: `${userName} ביקש/ה ממך להכין ${foodName} ל${slotLabel}`,
           data: { groupId, assignmentId },
@@ -63,14 +63,17 @@ export function AssigneePickerModal({
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
       Alert.alert('אופס', `לא הצלחנו לעדכן.\n${message}`);
     } finally {
-      setSavingUid(null);
+      setSavingId(null);
     }
   };
 
-  const sortedMembers = [...members].sort((a, b) => {
-    if (a.uid === uid) return -1;
-    if (b.uid === uid) return 1;
-    return a.joinedAt - b.joinedAt;
+  // Sort: me first, then other real members, then manual members
+  const sorted = [...assignees].sort((a, b) => {
+    if (a.isMe) return -1;
+    if (b.isMe) return 1;
+    if (a.isManual && !b.isManual) return 1;
+    if (!a.isManual && b.isManual) return -1;
+    return a.name.localeCompare(b.name, 'he');
   });
 
   return (
@@ -91,10 +94,10 @@ export function AssigneePickerModal({
             showsVerticalScrollIndicator={false}
           >
             <Pressable
-              onPress={() => handlePick(null)}
+              onPress={() => handlePick(null, false)}
               style={({ pressed }) => [
                 styles.row,
-                currentAssigneeUid === null && styles.rowSelected,
+                currentAssigneeId === null && styles.rowSelected,
                 { opacity: pressed ? 0.6 : 1 },
               ]}
             >
@@ -102,27 +105,33 @@ export function AssigneePickerModal({
                 <Text style={styles.avatarText}>?</Text>
               </View>
               <Text style={styles.rowText}>טרם שובץ</Text>
-              {currentAssigneeUid === null && <Text style={styles.checkmark}>✓</Text>}
+              {currentAssigneeId === null && <Text style={styles.checkmark}>✓</Text>}
             </Pressable>
 
-            {sortedMembers.map((m) => {
-              const isMe = m.uid === uid;
-              const isSelected = currentAssigneeUid === m.uid;
+            {sorted.map((a) => {
+              const isSelected = currentAssigneeId === a.id;
               return (
                 <Pressable
-                  key={m.uid}
-                  onPress={() => handlePick(m.uid)}
+                  key={a.id}
+                  onPress={() => handlePick(a.id, a.isManual)}
                   style={({ pressed }) => [
                     styles.row,
                     isSelected && styles.rowSelected,
                     { opacity: pressed ? 0.6 : 1 },
                   ]}
                 >
-                  <View style={[styles.avatar, isMe && styles.avatarMe]}>
-                    <Text style={styles.avatarText}>{m.name.charAt(0)}</Text>
+                  <View
+                    style={[
+                      styles.avatar,
+                      a.isMe && styles.avatarMe,
+                      a.isManual && styles.avatarManual,
+                    ]}
+                  >
+                    <Text style={styles.avatarText}>{a.name.charAt(0)}</Text>
                   </View>
-                  <Text style={styles.rowText}>{m.name}</Text>
-                  {isMe && <Text style={styles.youTag}>אני</Text>}
+                  <Text style={styles.rowText}>{a.name}</Text>
+                  {a.isMe && <Text style={styles.youTag}>אני</Text>}
+                  {a.isManual && <Text style={styles.manualTag}>ידני</Text>}
                   {isSelected && <Text style={styles.checkmark}>✓</Text>}
                 </Pressable>
               );
@@ -167,13 +176,8 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     marginBottom: spacing.sm,
   },
-  list: {
-    flexGrow: 0,
-  },
-  listContent: {
-    gap: spacing.xs,
-    paddingBottom: spacing.md,
-  },
+  list: { flexGrow: 0 },
+  listContent: { gap: spacing.xs, paddingBottom: spacing.md },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -196,12 +200,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarMe: {
-    backgroundColor: colors.primary,
-  },
-  avatarNone: {
-    backgroundColor: colors.border,
-  },
+  avatarMe: { backgroundColor: colors.primary },
+  avatarManual: { backgroundColor: colors.warning },
+  avatarNone: { backgroundColor: colors.border },
   avatarText: {
     fontSize: fontSize.md,
     fontFamily: fontFamily.bold,
@@ -220,6 +221,15 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     color: colors.primary,
     backgroundColor: colors.surface,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  manualTag: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.bold,
+    color: colors.warning,
+    backgroundColor: '#FBE6DC',
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.pill,

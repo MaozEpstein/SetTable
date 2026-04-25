@@ -13,7 +13,7 @@ import { useUser } from '../context/UserContext';
 import { useFoods } from '../hooks/useFoods';
 import { createAssignment } from '../services/assignments';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import { FOOD_CATEGORIES, getFoodCategories, type Assignment, type Food, type FoodCategory } from '../types';
+import { getFoodCategories, type Assignment, type CategoryInfo, type Food } from '../types';
 
 type Props = {
   visible: boolean;
@@ -21,6 +21,7 @@ type Props = {
   slot: string;
   slotLabel: string;
   slotEmoji: string;
+  categories: CategoryInfo[];
   existingAssignments: Assignment[];
   onClose: () => void;
 };
@@ -31,6 +32,7 @@ export function AddFoodToSlotModal({
   slot,
   slotLabel,
   slotEmoji,
+  categories,
   existingAssignments,
   onClose,
 }: Props) {
@@ -43,17 +45,17 @@ export function AddFoodToSlotModal({
   );
 
   const grouped = useMemo(() => {
-    const map = new Map<FoodCategory, Food[]>();
-    for (const cat of FOOD_CATEGORIES) {
+    const map = new Map<string, Food[]>();
+    for (const cat of categories) {
       map.set(cat.key, []);
     }
     for (const food of foods) {
-      for (const cat of getFoodCategories(food)) {
-        map.get(cat)?.push(food);
+      for (const c of getFoodCategories(food)) {
+        map.get(c)?.push(food);
       }
     }
     return map;
-  }, [foods]);
+  }, [foods, categories]);
 
   const handlePick = async (food: Food) => {
     if (usedFoodIds.has(food.id) || savingId) return;
@@ -102,7 +104,7 @@ export function AddFoodToSlotModal({
                 </Text>
               </View>
             ) : (
-              FOOD_CATEGORIES.map((cat) => {
+              categories.map((cat) => {
                 const items = grouped.get(cat.key) ?? [];
                 if (items.length === 0) return null;
                 return (

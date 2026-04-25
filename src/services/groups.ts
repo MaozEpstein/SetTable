@@ -18,7 +18,14 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { deleteAssignmentsForSlot } from './assignments';
-import type { CustomMealSlot, Group, Member } from '../types';
+import type {
+  CustomFoodCategory,
+  CustomMealSlot,
+  Food,
+  Group,
+  ManualMember,
+  Member,
+} from '../types';
 
 const GROUPS = 'groups';
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I confusion
@@ -163,6 +170,124 @@ export async function removeCustomSlot(
   const filtered = (data.customSlots ?? []).filter((s) => s.id !== slotId);
   await updateDoc(ref, { customSlots: filtered });
   await deleteAssignmentsForSlot(groupId, slotId);
+}
+
+function generateCategoryId(): string {
+  return `cat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function generateManualMemberId(): string {
+  return `mm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+type AddCustomCategoryInput = {
+  groupId: string;
+  label: string;
+  emoji: string;
+  uid: string;
+};
+
+export async function addCustomCategory({
+  groupId,
+  label,
+  emoji,
+  uid,
+}: AddCustomCategoryInput): Promise<string> {
+  const cat: CustomFoodCategory = {
+    id: generateCategoryId(),
+    label: label.trim(),
+    emoji,
+    createdBy: uid,
+    createdAt: Date.now(),
+  };
+  await updateDoc(doc(db, GROUPS, groupId), {
+    customCategories: arrayUnion(cat),
+  });
+  return cat.id;
+}
+
+export async function removeCustomCategory(
+  groupId: string,
+  categoryId: string,
+): Promise<void> {
+  // 1. Strip the category off every food that uses it
+  const foodsSnap = await getDocs(collection(db, GROUPS, groupId, 'foods'));
+  if (!foodsSnap.empty) {
+    const batch = writeBatch(db);
+    let touched = 0;
+    foodsSnap.forEach((d) => {
+      const data = d.data() as Pick<Food, 'categories' | 'category'>;
+      const current =
+        data.categories ?? (data.category ? [data.category] : []);
+      if (current.includes(categoryId)) {
+        const next = current.filter((c) => c !== categoryId);
+        batch.update(d.ref, { categories: next });
+        touched += 1;
+      }
+    });
+    if (touched > 0) await batch.commit();
+  }
+
+  // 2. Remove the category from the group
+  const ref = doc(db, GROUPS, groupId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as { customCategories?: CustomFoodCategory[] };
+  const filtered = (data.customCategories ?? []).filter(
+    (c) => c.id !== categoryId,
+  );
+  await updateDoc(ref, { customCategories: filtered });
+}
+
+type AddManualMemberInput = {
+  groupId: string;
+  name: string;
+  uid: string;
+};
+
+export async function addManualMember({
+  groupId,
+  name,
+  uid,
+}: AddManualMemberInput): Promise<string> {
+  const member: ManualMember = {
+    id: generateManualMemberId(),
+    name: name.trim(),
+    addedBy: uid,
+    addedAt: Date.now(),
+  };
+  await updateDoc(doc(db, GROUPS, groupId), {
+    manualMembers: arrayUnion(member),
+  });
+  return member.id;
+}
+
+export async function removeManualMember(
+  groupId: string,
+  manualMemberId: string,
+): Promise<void> {
+  // 1. Unassign any assignment pointing to this manual member
+  const assignmentsSnap = await getDocs(
+    query(
+      collection(db, GROUPS, groupId, 'assignments'),
+      where('assignedTo', '==', manualMemberId),
+    ),
+  );
+  if (!assignmentsSnap.empty) {
+    const batch = writeBatch(db);
+    assignmentsSnap.forEach((d) => batch.update(d.ref, { assignedTo: null }));
+    await batch.commit();
+  }
+
+  // 2. Remove from group
+  const ref = doc(db, GROUPS, groupId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as { manualMembers?: ManualMember[] };
+  const filtered = (data.manualMembers ?? []).filter(
+    (m) => m.id !== manualMemberId,
+  );
+  await updateDoc(ref, { manualMembers: filtered });
 }
 
 export async function leaveGroup(groupId: string, uid: string): Promise<void> {
