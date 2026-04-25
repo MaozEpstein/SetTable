@@ -4,6 +4,7 @@ import { AddFoodToSlotModal } from './AddFoodToSlotModal';
 import { AddMealSlotModal } from './AddMealSlotModal';
 import { AssigneePickerModal } from './AssigneePickerModal';
 import { MealSlotTabs, type MealSubTab } from './MealSlotTabs';
+import { SlotPickerModal } from './SlotPickerModal';
 import { useUser } from '../context/UserContext';
 import { useAssignments } from '../hooks/useAssignments';
 import { useFoods } from '../hooks/useFoods';
@@ -42,6 +43,7 @@ export function MealsTab({ group }: Props) {
     assignedTo: string | null;
   } | null>(null);
   const [addSlotModalVisible, setAddSlotModalVisible] = useState(false);
+  const [slotPickerVisible, setSlotPickerVisible] = useState(false);
 
   const slots = useMemo(() => getAllSlots(group), [group]);
   const slotByKey = useMemo(() => {
@@ -155,6 +157,7 @@ export function MealsTab({ group }: Props) {
           foodsById={foodsById}
           slotByKey={slotByKey}
           assigneeById={assigneeById}
+          onAdd={() => setSlotPickerVisible(true)}
           onToggleDone={handleToggleDone}
           onChangeAssignee={(a, foodName) =>
             setEditingAssignment(buildEditingState(a, foodName))
@@ -211,6 +214,16 @@ export function MealsTab({ group }: Props) {
         groupId={groupId}
         onClose={() => setAddSlotModalVisible(false)}
       />
+
+      <SlotPickerModal
+        visible={slotPickerVisible}
+        slots={slots}
+        onPick={(slot) => {
+          setSlotPickerVisible(false);
+          setAddingToSlot(slot);
+        }}
+        onClose={() => setSlotPickerVisible(false)}
+      />
     </View>
   );
 }
@@ -222,6 +235,7 @@ type AllViewProps = {
   foodsById: Map<string, Food>;
   slotByKey: Map<string, SlotInfo>;
   assigneeById: Map<string, AssigneeInfo>;
+  onAdd: () => void;
   onToggleDone: (a: Assignment) => void;
   onChangeAssignee: (a: Assignment, foodName: string) => void;
   onLongPress: (a: Assignment, foodName: string) => void;
@@ -234,6 +248,7 @@ function AllAssignmentsView({
   foodsById,
   slotByKey,
   assigneeById,
+  onAdd,
   onToggleDone,
   onChangeAssignee,
   onLongPress,
@@ -242,47 +257,53 @@ function AllAssignmentsView({
     return <Text style={styles.loadingText}>טוען שיבוצים...</Text>;
   }
 
-  if (assignments.length === 0) {
-    return (
-      <View style={styles.emptyCard}>
-        <Text style={styles.emptyEmoji}>🍽️</Text>
-        <Text style={styles.emptyTitle}>אין עדיין מאכלים ששובצו</Text>
-        <Text style={styles.emptyTextCard}>
-          בחרו ארוחה ספציפית מהטאבים למעלה והוסיפו לה מאכלים
-        </Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.flatList}>
-      {assignments.map((a) => {
-        const food = foodsById.get(a.foodId);
-        const foodName = food?.name ?? '(מאכל נמחק)';
-        const slotInfo = slotByKey.get(a.slot);
-        const categoryLabels = food
-          ? getFoodCategories(food)
-              .map((c) => getCategoryInfo(group, c))
-              .filter((info): info is NonNullable<typeof info> => info !== null)
-              .map((info) => `${info.emoji} ${info.label}`)
-          : [];
-        const assignee = a.assignedTo ? assigneeById.get(a.assignedTo) : null;
-        return (
-          <FlatAssignmentRow
-            key={a.id}
-            assignment={a}
-            foodName={foodName}
-            categoryLabels={categoryLabels}
-            slotLabel={
-              slotInfo ? `${slotInfo.emoji} ${slotInfo.shortLabel}` : '(סעודה נמחקה)'
-            }
-            assigneeName={assignee?.name ?? null}
-            onToggleDone={() => onToggleDone(a)}
-            onChangeAssignee={() => onChangeAssignee(a, foodName)}
-            onLongPress={() => onLongPress(a, foodName)}
-          />
-        );
-      })}
+      {assignments.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyEmoji}>🍽️</Text>
+          <Text style={styles.emptyTitle}>אין עדיין מאכלים ששובצו</Text>
+          <Text style={styles.emptyTextCard}>
+            הוסיפו את המאכל הראשון לכל אחת מהארוחות
+          </Text>
+        </View>
+      ) : (
+        assignments.map((a) => {
+          const food = foodsById.get(a.foodId);
+          const foodName = food?.name ?? '(מאכל נמחק)';
+          const slotInfo = slotByKey.get(a.slot);
+          const categoryLabels = food
+            ? getFoodCategories(food)
+                .map((c) => getCategoryInfo(group, c))
+                .filter((info): info is NonNullable<typeof info> => info !== null)
+                .map((info) => `${info.emoji} ${info.label}`)
+            : [];
+          const assignee = a.assignedTo ? assigneeById.get(a.assignedTo) : null;
+          return (
+            <FlatAssignmentRow
+              key={a.id}
+              assignment={a}
+              foodName={foodName}
+              categoryLabels={categoryLabels}
+              slotLabel={
+                slotInfo ? `${slotInfo.emoji} ${slotInfo.shortLabel}` : '(סעודה נמחקה)'
+              }
+              assigneeName={assignee?.name ?? null}
+              onToggleDone={() => onToggleDone(a)}
+              onChangeAssignee={() => onChangeAssignee(a, foodName)}
+              onLongPress={() => onLongPress(a, foodName)}
+            />
+          );
+        })
+      )}
+
+      <Pressable
+        onPress={onAdd}
+        style={({ pressed }) => [styles.addRow, { opacity: pressed ? 0.6 : 1 }]}
+      >
+        <Text style={styles.addIcon}>+</Text>
+        <Text style={styles.addText}>הוסף מאכל</Text>
+      </Pressable>
     </View>
   );
 }
@@ -371,8 +392,15 @@ function AssignmentRow({
   onChangeAssignee,
   onLongPress,
 }: AssignmentRowProps) {
+  const isAssignedNotDone = !!assignment.assignedTo && !assignment.done;
   return (
-    <View style={[styles.row, assignment.done && styles.rowDone]}>
+    <View
+      style={[
+        styles.row,
+        isAssignedNotDone && styles.rowAssigned,
+        assignment.done && styles.rowDone,
+      ]}
+    >
       <Pressable
         onPress={onToggleDone}
         hitSlop={8}
@@ -425,8 +453,15 @@ function FlatAssignmentRow({
   onChangeAssignee,
   onLongPress,
 }: FlatRowProps) {
+  const isAssignedNotDone = !!assignment.assignedTo && !assignment.done;
   return (
-    <View style={[styles.row, assignment.done && styles.rowDone]}>
+    <View
+      style={[
+        styles.row,
+        isAssignedNotDone && styles.rowAssigned,
+        assignment.done && styles.rowDone,
+      ]}
+    >
       <Pressable
         onPress={onToggleDone}
         hitSlop={8}
@@ -536,6 +571,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.sm,
+  },
+  rowAssigned: {
+    backgroundColor: '#FBEDE3',
+    borderColor: colors.warning,
   },
   rowDone: {
     backgroundColor: '#F1F5EC',
