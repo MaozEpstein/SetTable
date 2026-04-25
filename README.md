@@ -52,6 +52,16 @@
 - **התנתקות** — איפוס מקומי וחזרה למסך הפתיחה
 - **עזיבת קבוצה** — הסרה ממסך החברים
 
+### התראות Push
+- כשמישהו אחר משבץ אותך להכין מאכל — מקבלים התראה במכשיר
+- ההתראה מציינת מי שיבץ, איזה מאכל, ולאיזו סעודה
+- בכניסה הראשונה האפליקציה מבקשת הרשאת התראות
+- אם דוחים את ההרשאה — האפליקציה ממשיכה לעבוד רגיל, רק בלי הפושים
+
+> **מגבלות:** Push ב-Expo Go לא נתמך ב-iOS (החל מ-SDK 53) ודורש EAS project ID ב-Android.
+> כדי להפעיל Push לכל המשתתפים, יש לבנות development build דרך `eas build` (מחוץ ל-MVP).
+> בכל מקרה הסנכרון בזמן אמת ב-Firestore עדיין עובד, אז שינויים מתעדכנים מיד באפליקציה הפתוחה.
+
 ---
 
 ## טכנולוגיה
@@ -65,6 +75,7 @@
 | אחסון מקומי | AsyncStorage |
 | פונט עברי | Heebo (Google Fonts) |
 | שיתוף קוד | expo-clipboard + expo-sharing |
+| התראות Push | expo-notifications + Expo Push Service |
 
 ## הרצה
 
@@ -131,8 +142,24 @@ SetTable/
 │       ├── auth.ts                  ← ensureAnonymousAuth
 │       ├── groups.ts                ← create / join / leave / rename
 │       ├── foods.ts                 ← קטלוג המאכלים (CRUD)
-│       └── assignments.ts           ← שיבוצים (CRUD + cascade)
+│       ├── assignments.ts           ← שיבוצים (CRUD + cascade)
+│       └── push.ts                  ← רישום ושליחת התראות Push
 ```
+
+---
+
+## הוספת חוקי Firestore עבור Push
+
+חובה — אחרת רישום הטוקן של ה-Push ייכשל ב-`permission-denied`. הוסף את החוק הבא לחוקים הקיימים שלך ב-Firestore:
+
+```
+match /pushTokens/{userId} {
+  allow read: if request.auth != null;
+  allow write: if request.auth != null && request.auth.uid == userId;
+}
+```
+
+(החוק הזה כלול גם בחוקים הקשיחים בהמשך.)
 
 ---
 
@@ -164,6 +191,13 @@ service cloud.firestore {
         allow read, write: if request.auth != null &&
           request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberUids;
       }
+    }
+
+    // טוקני Push: כל משתמש מזוהה יכול לקרוא טוקנים של אחרים
+    // (כדי לשלוח להם התראות), אבל רק לכתוב את הטוקן של עצמו
+    match /pushTokens/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

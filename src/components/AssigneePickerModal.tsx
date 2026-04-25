@@ -11,14 +11,17 @@ import {
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
 import { setAssignee } from '../services/assignments';
+import { sendPushNotification } from '../services/push';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import type { Member } from '../types';
+import { MEAL_SLOTS, type Member, type MealSlot } from '../types';
 
 type Props = {
   visible: boolean;
   groupId: string;
+  groupName: string;
   assignmentId: string;
   foodName: string;
+  slot: MealSlot;
   members: Member[];
   currentAssigneeUid: string | null;
   onClose: () => void;
@@ -27,13 +30,15 @@ type Props = {
 export function AssigneePickerModal({
   visible,
   groupId,
+  groupName,
   assignmentId,
   foodName,
+  slot,
   members,
   currentAssigneeUid,
   onClose,
 }: Props) {
-  const { uid } = useUser();
+  const { uid, userName } = useUser();
   const [savingUid, setSavingUid] = useState<string | null>(null);
 
   const handlePick = async (newUid: string | null) => {
@@ -41,6 +46,19 @@ export function AssigneePickerModal({
     setSavingUid(newUid ?? '__none__');
     try {
       await setAssignee(groupId, assignmentId, newUid);
+
+      const isAssigningOther =
+        newUid !== null && newUid !== uid && newUid !== currentAssigneeUid;
+      if (isAssigningOther) {
+        const slotLabel = MEAL_SLOTS.find((s) => s.key === slot)?.label ?? '';
+        sendPushNotification({
+          toUid: newUid,
+          title: `🕯️ שובצת בקבוצה "${groupName}"`,
+          body: `${userName} ביקש/ה ממך להכין ${foodName} ל${slotLabel}`,
+          data: { groupId, assignmentId },
+        }).catch(() => {});
+      }
+
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';

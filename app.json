@@ -30,7 +30,18 @@
       "eas": {}
     },
     "plugins": [
-      "expo-font"
-    ]
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#C9943B"
+        }
+      ]
+    ],
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#C9943B",
+      "iosDisplayInForeground": true
+    }
   }
 }

@@ -21,6 +21,7 @@ export function MealsTab({ group }: Props) {
   const [editingAssignment, setEditingAssignment] = useState<{
     id: string;
     foodName: string;
+    slot: MealSlot;
     assignedTo: string | null;
   } | null>(null);
 
@@ -104,6 +105,7 @@ export function MealsTab({ group }: Props) {
                       setEditingAssignment({
                         id: a.id,
                         foodName,
+                        slot: a.slot,
                         assignedTo: a.assignedTo,
                       })
                     }
@@ -145,8 +147,10 @@ export function MealsTab({ group }: Props) {
         <AssigneePickerModal
           visible={editingAssignment !== null}
           groupId={groupId}
+          groupName={group.name}
           assignmentId={editingAssignment.id}
           foodName={editingAssignment.foodName}
+          slot={editingAssignment.slot}
           members={editingMembers}
           currentAssigneeUid={editingAssignment.assignedTo}
           onClose={() => setEditingAssignment(null)}

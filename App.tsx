@@ -13,6 +13,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { FirebaseSetupScreen } from './src/screens/FirebaseSetupScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { ensureAnonymousAuth } from './src/services/auth';
+import { registerForPushNotifications } from './src/services/push';
 import { clearUserName, getUserName, setUserName as persistUserName } from './src/storage';
 import { colors } from './src/theme';
 
@@ -51,6 +52,11 @@ export default function App() {
         setAuthError(err instanceof Error ? err.message : String(err));
       });
   }, [userName, uid]);
+
+  useEffect(() => {
+    if (!uid) return;
+    registerForPushNotifications(uid).catch(() => {});
+  }, [uid]);
 
   if (!fontsLoaded || !nameChecked) {
     return (
