@@ -38,8 +38,19 @@ jobs:
       - name: Expo prebuild (android)
         run: npx expo prebuild --platform android --no-install --non-interactive
 
-      - name: Generate debug keystore
-        run: keytool -genkeypair -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+      - name: Ensure debug keystore exists
+        run: |
+          set -e
+          if [ ! -f android/app/debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore android/app/debug.keystore \
+              -alias androiddebugkey \
+              -storepass android -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          else
+            echo "debug.keystore already exists (created by prebuild) — reusing it"
+          fi
 
       - name: Patch build.gradle with release signing
         run: node .github/scripts/patch-signing.js
