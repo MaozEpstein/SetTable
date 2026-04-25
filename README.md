@@ -1,6 +1,16 @@
 # 🕯️ שולחן ערוך
 
+[![Latest Release](https://img.shields.io/github/v/release/MaozEpsein/SetTable?label=Latest%20Release)](https://github.com/MaozEpsein/SetTable/releases/latest)
+
 אפליקציה לתכנון ארוחות שבת משותפות עם המשפחה והחברים.
+
+## 📥 הורדה
+
+הורדה ישירה לאנדרואיד (קישור קבוע — תמיד מצביע על הגרסה האחרונה):
+
+**<https://github.com/MaozEpsein/SetTable/releases/latest/download/SetTable.apk>**
+
+פתחו את הקובץ במכשיר ואשרו "התקנה ממקור לא מוכר" אם תתבקשו.
 
 ## למה?
 
@@ -323,6 +333,22 @@ service cloud.firestore {
   }
 }
 ```
+
+---
+
+## שחרור גרסה חדשה
+
+כל push של תגית `v*` מפעיל את ה-workflow `release.yml`, שבונה APK ומפרסם אותו כ-GitHub Release. הקישור הקבוע (`releases/latest/download/SetTable.apk`) יצביע אוטומטית על הגרסה החדשה.
+
+```bash
+# 1. עדכנו את expo.version וגם את expo.android.versionCode ב-app.json
+#    (חשוב להעלות versionCode — אחרת אנדרואיד לא יציע התקנה על גבי גרסה ישנה)
+git commit -am "release vX.Y.Z"
+git tag vX.Y.Z
+git push && git push origin vX.Y.Z
+```
+
+ה-CI (`ci.yml`) רץ על כל push/PR ובונה debug APK כ-artifact, כך שאפשר להוריד build בדיקה גם בלי תגית.
 
 ---
 

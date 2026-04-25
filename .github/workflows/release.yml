@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release-apk:
+    name: Build and publish APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Expo prebuild (android)
+        run: npx expo prebuild --platform android --no-install --non-interactive
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK to stable filename
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk SetTable.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body: |
+            ## 🕯️ שולחן ערוך — גרסה ${{ github.ref_name }}
+
+            ### הורדה
+            הורידו את ה-APK המצורף, או השתמשו בקישור הקבוע שתמיד מצביע על הגרסה האחרונה:
+
+            https://github.com/MaozEpsein/SetTable/releases/latest/download/SetTable.apk
+
+            ### התקנה
+            פתחו את הקובץ במכשיר אנדרואיד ואשרו "התקנה ממקור לא מוכר" אם תתבקשו.
+          files: SetTable.apk
