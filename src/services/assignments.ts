@@ -13,7 +13,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Assignment, MealSlot } from '../types';
+import type { Assignment } from '../types';
 
 function assignmentsCol(groupId: string) {
   return collection(db, 'groups', groupId, 'assignments');
@@ -22,7 +22,7 @@ function assignmentsCol(groupId: string) {
 type CreateAssignmentInput = {
   groupId: string;
   foodId: string;
-  slot: MealSlot;
+  slot: string;
   uid: string;
 };
 
@@ -76,6 +76,19 @@ export async function deleteAssignmentsForFood(
 ): Promise<void> {
   const snap = await getDocs(
     query(assignmentsCol(groupId), where('foodId', '==', foodId)),
+  );
+  if (snap.empty) return;
+  const batch = writeBatch(db);
+  snap.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+}
+
+export async function deleteAssignmentsForSlot(
+  groupId: string,
+  slot: string,
+): Promise<void> {
+  const snap = await getDocs(
+    query(assignmentsCol(groupId), where('slot', '==', slot)),
   );
   if (snap.empty) return;
   const batch = writeBatch(db);

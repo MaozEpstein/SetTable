@@ -13,12 +13,14 @@ import { useUser } from '../context/UserContext';
 import { useFoods } from '../hooks/useFoods';
 import { createAssignment } from '../services/assignments';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import { FOOD_CATEGORIES, MEAL_SLOTS, type Assignment, type Food, type FoodCategory, type MealSlot } from '../types';
+import { FOOD_CATEGORIES, type Assignment, type Food, type FoodCategory } from '../types';
 
 type Props = {
   visible: boolean;
   groupId: string;
-  slot: MealSlot;
+  slot: string;
+  slotLabel: string;
+  slotEmoji: string;
   existingAssignments: Assignment[];
   onClose: () => void;
 };
@@ -27,14 +29,14 @@ export function AddFoodToSlotModal({
   visible,
   groupId,
   slot,
+  slotLabel,
+  slotEmoji,
   existingAssignments,
   onClose,
 }: Props) {
   const { uid } = useUser();
   const { foods, loading } = useFoods(groupId);
   const [savingId, setSavingId] = useState<string | null>(null);
-
-  const slotMeta = MEAL_SLOTS.find((s) => s.key === slot);
   const usedFoodIds = useMemo(
     () => new Set(existingAssignments.map((a) => a.foodId)),
     [existingAssignments],
@@ -76,7 +78,7 @@ export function AddFoodToSlotModal({
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
           <Text style={styles.title}>
-            הוסף ל{slotMeta?.emoji} {slotMeta?.label}
+            הוסף ל{slotEmoji} {slotLabel}
           </Text>
           <Text style={styles.helper}>
             בחר מאכל מרשימת המאכלים של הקבוצה

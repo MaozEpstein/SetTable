@@ -18,6 +18,14 @@ export type Member = {
   joinedAt: number;
 };
 
+export type CustomMealSlot = {
+  id: string;
+  label: string;
+  emoji: string;
+  createdBy: string;
+  createdAt: number;
+};
+
 export type Food = {
   id: string;
   name: string;
@@ -29,7 +37,7 @@ export type Food = {
 export type Assignment = {
   id: string;
   foodId: string;
-  slot: MealSlot;
+  slot: string; // a default MealSlot key OR a custom slot id
   assignedTo: string | null;
   done: boolean;
   createdBy: string;
@@ -43,6 +51,7 @@ export type Group = {
   createdBy: string;
   createdAt: number;
   members: Record<string, Member>;
+  customSlots?: CustomMealSlot[];
 };
 
 export const FOOD_CATEGORIES: { key: FoodCategory; label: string; emoji: string }[] = [
@@ -60,3 +69,40 @@ export const MEAL_SLOTS: { key: MealSlot; label: string; shortLabel: string; emo
   { key: 'third_meal', label: 'סעודה שלישית', shortLabel: 'שלישית', emoji: '🌅' },
   { key: 'general', label: 'כללי', shortLabel: 'כללי', emoji: '📋' },
 ];
+
+export type SlotInfo = {
+  key: string;
+  label: string;
+  shortLabel: string;
+  emoji: string;
+  isCustom: boolean;
+};
+
+export function getAllSlots(group: Pick<Group, 'customSlots'> | null): SlotInfo[] {
+  const defaults: SlotInfo[] = MEAL_SLOTS.map((s) => ({
+    key: s.key,
+    label: s.label,
+    shortLabel: s.shortLabel,
+    emoji: s.emoji,
+    isCustom: false,
+  }));
+  const custom: SlotInfo[] = (group?.customSlots ?? []).map((c) => ({
+    key: c.id,
+    label: c.label,
+    shortLabel: c.label,
+    emoji: c.emoji,
+    isCustom: true,
+  }));
+  return [...defaults, ...custom];
+}
+
+export function getSlotInfo(
+  group: Pick<Group, 'customSlots'> | null,
+  slotKey: string,
+): SlotInfo | null {
+  return getAllSlots(group).find((s) => s.key === slotKey) ?? null;
+}
+
+export function getCategoryInfo(category: FoodCategory) {
+  return FOOD_CATEGORIES.find((c) => c.key === category) ?? null;
+}

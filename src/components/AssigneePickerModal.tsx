@@ -13,7 +13,7 @@ import { useUser } from '../context/UserContext';
 import { setAssignee } from '../services/assignments';
 import { sendPushNotification } from '../services/push';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import { MEAL_SLOTS, type Member, type MealSlot } from '../types';
+import type { Member } from '../types';
 
 type Props = {
   visible: boolean;
@@ -21,7 +21,7 @@ type Props = {
   groupName: string;
   assignmentId: string;
   foodName: string;
-  slot: MealSlot;
+  slotLabel: string;
   members: Member[];
   currentAssigneeUid: string | null;
   onClose: () => void;
@@ -33,7 +33,7 @@ export function AssigneePickerModal({
   groupName,
   assignmentId,
   foodName,
-  slot,
+  slotLabel,
   members,
   currentAssigneeUid,
   onClose,
@@ -50,7 +50,6 @@ export function AssigneePickerModal({
       const isAssigningOther =
         newUid !== null && newUid !== uid && newUid !== currentAssigneeUid;
       if (isAssigningOther) {
-        const slotLabel = MEAL_SLOTS.find((s) => s.key === slot)?.label ?? '';
         sendPushNotification({
           toUid: newUid,
           title: `🕯️ שובצת בקבוצה "${groupName}"`,

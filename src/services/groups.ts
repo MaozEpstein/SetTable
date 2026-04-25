@@ -5,6 +5,7 @@ import {
   collection,
   deleteField,
   doc,
+  getDoc,
   getDocs,
   limit,
   onSnapshot,
@@ -16,7 +17,8 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Group, Member } from '../types';
+import { deleteAssignmentsForSlot } from './assignments';
+import type { CustomMealSlot, Group, Member } from '../types';
 
 const GROUPS = 'groups';
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I confusion
@@ -118,6 +120,49 @@ export async function joinGroupByCode({
   });
 
   return { ok: true, id: docSnap.id, name: data.name };
+}
+
+function generateSlotId(): string {
+  return `slot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+type AddCustomSlotInput = {
+  groupId: string;
+  label: string;
+  emoji: string;
+  uid: string;
+};
+
+export async function addCustomSlot({
+  groupId,
+  label,
+  emoji,
+  uid,
+}: AddCustomSlotInput): Promise<string> {
+  const slot: CustomMealSlot = {
+    id: generateSlotId(),
+    label: label.trim(),
+    emoji,
+    createdBy: uid,
+    createdAt: Date.now(),
+  };
+  await updateDoc(doc(db, GROUPS, groupId), {
+    customSlots: arrayUnion(slot),
+  });
+  return slot.id;
+}
+
+export async function removeCustomSlot(
+  groupId: string,
+  slotId: string,
+): Promise<void> {
+  const ref = doc(db, GROUPS, groupId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as { customSlots?: CustomMealSlot[] };
+  const filtered = (data.customSlots ?? []).filter((s) => s.id !== slotId);
+  await updateDoc(ref, { customSlots: filtered });
+  await deleteAssignmentsForSlot(groupId, slotId);
 }
 
 export async function leaveGroup(groupId: string, uid: string): Promise<void> {

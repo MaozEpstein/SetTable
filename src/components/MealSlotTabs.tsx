@@ -1,34 +1,28 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import { MEAL_SLOTS, type MealSlot } from '../types';
+import type { SlotInfo } from '../types';
 
-export type MealSubTab = 'all' | MealSlot;
+export type MealSubTab = 'all' | string;
 
 type Props = {
+  slots: SlotInfo[];
   active: MealSubTab;
   onChange: (key: MealSubTab) => void;
-  countsBySlot?: Partial<Record<MealSlot, number>>;
+  countsBySlot?: Record<string, number>;
   totalCount?: number;
+  onAddSlot?: () => void;
+  onLongPressSlot?: (slot: SlotInfo) => void;
 };
 
-const ALL_TAB = { key: 'all' as const, label: 'הכל', emoji: '📅' };
-
-export function MealSlotTabs({ active, onChange, countsBySlot, totalCount }: Props) {
-  const tabs: { key: MealSubTab; label: string; emoji: string; count: number }[] = [
-    {
-      key: ALL_TAB.key,
-      label: ALL_TAB.label,
-      emoji: ALL_TAB.emoji,
-      count: totalCount ?? 0,
-    },
-    ...MEAL_SLOTS.map((s) => ({
-      key: s.key,
-      label: s.shortLabel,
-      emoji: s.emoji,
-      count: countsBySlot?.[s.key] ?? 0,
-    })),
-  ];
-
+export function MealSlotTabs({
+  slots,
+  active,
+  onChange,
+  countsBySlot,
+  totalCount,
+  onAddSlot,
+  onLongPressSlot,
+}: Props) {
   return (
     <View style={styles.wrap}>
       <ScrollView
@@ -36,34 +30,72 @@ export function MealSlotTabs({ active, onChange, countsBySlot, totalCount }: Pro
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >
-        {tabs.map((tab) => {
-          const isActive = tab.key === active;
-          return (
-            <Pressable
-              key={tab.key}
-              onPress={() => onChange(tab.key)}
-              style={({ pressed }) => [
-                styles.tab,
-                isActive && styles.tabActive,
-                { opacity: pressed && !isActive ? 0.6 : 1 },
-              ]}
-            >
-              <Text style={styles.emoji}>{tab.emoji}</Text>
-              <Text style={[styles.label, isActive && styles.labelActive]}>
-                {tab.label}
-              </Text>
-              {tab.count > 0 && (
-                <View style={[styles.badge, isActive && styles.badgeActive]}>
-                  <Text style={[styles.badgeText, isActive && styles.badgeTextActive]}>
-                    {tab.count}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
+        <SlotPill
+          isActive={active === 'all'}
+          onPress={() => onChange('all')}
+          emoji="📅"
+          label="הכל"
+          count={totalCount ?? 0}
+        />
+        {slots.map((slot) => (
+          <SlotPill
+            key={slot.key}
+            isActive={active === slot.key}
+            onPress={() => onChange(slot.key)}
+            onLongPress={
+              slot.isCustom && onLongPressSlot ? () => onLongPressSlot(slot) : undefined
+            }
+            emoji={slot.emoji}
+            label={slot.shortLabel}
+            count={countsBySlot?.[slot.key] ?? 0}
+          />
+        ))}
+        {onAddSlot && (
+          <Pressable
+            onPress={onAddSlot}
+            style={({ pressed }) => [
+              styles.addPill,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+          >
+            <Text style={styles.addIcon}>+</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </View>
+  );
+}
+
+type PillProps = {
+  isActive: boolean;
+  onPress: () => void;
+  onLongPress?: () => void;
+  emoji: string;
+  label: string;
+  count: number;
+};
+
+function SlotPill({ isActive, onPress, onLongPress, emoji, label, count }: PillProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={({ pressed }) => [
+        styles.tab,
+        isActive && styles.tabActive,
+        { opacity: pressed && !isActive ? 0.6 : 1 },
+      ]}
+    >
+      <Text style={styles.emoji}>{emoji}</Text>
+      <Text style={[styles.label, isActive && styles.labelActive]}>{label}</Text>
+      {count > 0 && (
+        <View style={[styles.badge, isActive && styles.badgeActive]}>
+          <Text style={[styles.badgeText, isActive && styles.badgeTextActive]}>
+            {count}
+          </Text>
+        </View>
+      )}
+    </Pressable>
   );
 }
 
@@ -77,6 +109,7 @@ const styles = StyleSheet.create({
   },
   row: {
     gap: 4,
+    alignItems: 'center',
   },
   tab: {
     flexDirection: 'row',
@@ -121,5 +154,21 @@ const styles = StyleSheet.create({
   },
   badgeTextActive: {
     color: '#FFFFFF',
+  },
+  addPill: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addIcon: {
+    fontSize: fontSize.xl,
+    color: colors.primary,
+    fontFamily: fontFamily.bold,
+    lineHeight: fontSize.xl + 2,
   },
 });
