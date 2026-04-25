@@ -12,6 +12,7 @@ import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
   getAllCategories,
   getFoodCategories,
+  sortFoods,
   type CategoryInfo,
   type Food,
   type Group,
@@ -34,9 +35,10 @@ export function FoodsTab({ group }: Props) {
   const categories = useMemo(() => getAllCategories(group), [group]);
 
   const grouped = useMemo(() => {
+    const sorted = sortFoods(foods);
     const map = new Map<string, Food[]>();
     for (const cat of categories) map.set(cat.key, []);
-    for (const food of foods) {
+    for (const food of sorted) {
       for (const c of getFoodCategories(food)) {
         map.get(c)?.push(food);
       }
@@ -184,7 +186,10 @@ function FoodRow({ food, onPress }: { food: Food; onPress: () => void }) {
       onPress={onPress}
       style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
     >
-      <Text style={styles.foodName}>{food.name}</Text>
+      <Text style={styles.foodName}>
+        {food.isFavorite ? '⭐ ' : ''}
+        {food.name}
+      </Text>
       <View style={styles.rowRight}>
         {hasDetails && (
           <View style={styles.detailsBadge}>

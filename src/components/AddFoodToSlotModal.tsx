@@ -19,6 +19,7 @@ import {
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
   getFoodCategories,
+  sortFoods,
   type Assignment,
   type CategoryInfo,
   type Food,
@@ -59,11 +60,12 @@ export function AddFoodToSlotModal({
   );
 
   const grouped = useMemo(() => {
+    const sorted = sortFoods(foods);
     const map = new Map<string, Food[]>();
     for (const cat of categories) {
       map.set(cat.key, []);
     }
-    for (const food of foods) {
+    for (const food of sorted) {
       for (const c of getFoodCategories(food)) {
         map.get(c)?.push(food);
       }
@@ -266,6 +268,7 @@ export function AddFoodToSlotModal({
                               selected && styles.foodNameSelected,
                             ]}
                           >
+                            {food.isFavorite ? '⭐ ' : ''}
                             {food.name}
                           </Text>
                           {used && <Text style={styles.usedTag}>כבר בסעודה</Text>}

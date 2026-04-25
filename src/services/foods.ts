@@ -6,7 +6,6 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
-  orderBy,
   query,
   updateDoc,
   type Unsubscribe,
@@ -40,6 +39,7 @@ export async function createFood({
     name: name.trim(),
     categories,
     images: [],
+    isFavorite: false,
     createdBy: uid,
     createdAt: Date.now(),
   });
@@ -53,6 +53,7 @@ type UpdateFoodInput = {
   categories?: FoodCategory[];
   recipe?: string | null;
   notes?: string | null;
+  isFavorite?: boolean;
 };
 
 export async function updateFood({
@@ -62,12 +63,14 @@ export async function updateFood({
   categories,
   recipe,
   notes,
+  isFavorite,
 }: UpdateFoodInput): Promise<void> {
   const update: Record<string, unknown> = { updatedAt: Date.now() };
   if (name !== undefined) update.name = name.trim();
   if (categories !== undefined) update.categories = categories;
   if (recipe !== undefined) update.recipe = recipe?.trim() ?? '';
   if (notes !== undefined) update.notes = notes?.trim() ?? '';
+  if (isFavorite !== undefined) update.isFavorite = isFavorite;
   await updateDoc(foodDoc(groupId, foodId), update);
 }
 
@@ -110,7 +113,9 @@ export function subscribeFoods(
   onChange: (foods: Food[]) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
-  const q = query(foodsCol(groupId), orderBy('createdAt', 'desc'));
+  // Sorting is done client-side (sortFoods) to honor favorites + Hebrew
+  // alphabetical order, so we don't impose an orderBy here.
+  const q = query(foodsCol(groupId));
   return onSnapshot(
     q,
     (snap) => {

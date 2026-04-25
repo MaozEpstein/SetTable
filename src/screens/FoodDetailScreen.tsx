@@ -57,6 +57,7 @@ export function FoodDetailScreen({
   const [selectedCats, setSelectedCats] = useState<Set<FoodCategory>>(new Set());
   const [recipe, setRecipe] = useState('');
   const [notes, setNotes] = useState('');
+  const [isFavorite, setIsFavorite] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -71,6 +72,7 @@ export function FoodDetailScreen({
     setSelectedCats(new Set(getFoodCategories(food)));
     setRecipe(food.recipe ?? '');
     setNotes(food.notes ?? '');
+    setIsFavorite(!!food.isFavorite);
   }, [food, editing]);
 
   const categories: CategoryInfo[] = group ? getAllCategories(group) : [];
@@ -120,6 +122,7 @@ export function FoodDetailScreen({
         categories: Array.from(selectedCats),
         recipe,
         notes,
+        isFavorite,
       });
       setEditing(false);
     } catch (err) {
@@ -252,11 +255,17 @@ export function FoodDetailScreen({
     .map((c) => getCategoryInfo(group, c))
     .filter((info): info is NonNullable<typeof info> => info !== null);
 
+  const displayTitle = editing
+    ? 'עריכת מאכל'
+    : food.isFavorite
+      ? `⭐ ${food.name}`
+      : food.name;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <StatusBar style="dark" />
       <ScreenHeader
-        title={editing ? 'עריכת מאכל' : food.name}
+        title={displayTitle}
         onBack={editing ? handleCancel : () => navigation.goBack()}
         right={headerRight}
       />
@@ -270,16 +279,37 @@ export function FoodDetailScreen({
           keyboardShouldPersistTaps="handled"
         >
           {editing ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>שם המאכל</Text>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                style={styles.input}
-                maxLength={50}
-                textAlign="right"
-              />
-            </View>
+            <>
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>שם המאכל</Text>
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  style={styles.input}
+                  maxLength={50}
+                  textAlign="right"
+                />
+              </View>
+
+              <Pressable
+                onPress={() => setIsFavorite((v) => !v)}
+                style={({ pressed }) => [
+                  styles.favoriteRow,
+                  isFavorite && styles.favoriteRowActive,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                <Text style={styles.favoriteStar}>{isFavorite ? '⭐' : '☆'}</Text>
+                <View style={styles.favoriteTextWrap}>
+                  <Text style={styles.favoriteTitle}>
+                    {isFavorite ? 'במועדפים' : 'סמן כמועדף'}
+                  </Text>
+                  <Text style={styles.favoriteHint}>
+                    מועדפים מופיעים בראש כל רשימה
+                  </Text>
+                </View>
+              </Pressable>
+            </>
           ) : null}
 
           <View style={styles.section}>
@@ -649,6 +679,38 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.medium,
     color: colors.warning,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  favoriteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  favoriteRowActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#FBEFD9',
+  },
+  favoriteStar: {
+    fontSize: 28,
+  },
+  favoriteTextWrap: { flex: 1, gap: 2 },
+  favoriteTitle: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.bold,
+    color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  favoriteHint: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
     textAlign: 'right',
     writingDirection: 'rtl',
   },

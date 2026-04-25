@@ -15,6 +15,7 @@ import { resolvePlaceholder } from '../services/assignments';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
   getFoodCategories,
+  sortFoods,
   type CategoryInfo,
   type Food,
 } from '../types';
@@ -50,9 +51,10 @@ export function ReplacePlaceholderModal({
   }, [visible, defaultCategoryKey]);
 
   const grouped = useMemo(() => {
+    const sorted = sortFoods(foods);
     const map = new Map<string, Food[]>();
     for (const cat of categories) map.set(cat.key, []);
-    for (const food of foods) {
+    for (const food of sorted) {
       for (const c of getFoodCategories(food)) {
         map.get(c)?.push(food);
       }
@@ -150,7 +152,10 @@ export function ReplacePlaceholderModal({
                             { opacity: pressed ? 0.7 : 1 },
                           ]}
                         >
-                          <Text style={styles.foodName}>{food.name}</Text>
+                          <Text style={styles.foodName}>
+                            {food.isFavorite ? '⭐ ' : ''}
+                            {food.name}
+                          </Text>
                           {isSaving ? (
                             <Text style={styles.savingTag}>מחליף...</Text>
                           ) : (

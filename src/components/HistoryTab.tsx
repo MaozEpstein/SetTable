@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { PrimaryButton } from './PrimaryButton';
+import { useUser } from '../context/UserContext';
+import { useAssignments } from '../hooks/useAssignments';
+import { useFoods } from '../hooks/useFoods';
 import { useHistory } from '../hooks/useHistory';
-import { deleteHistoryEntry } from '../services/history';
+import { deleteHistoryEntry, restoreFromHistory } from '../services/history';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
   eventLabel,
@@ -16,8 +20,62 @@ type Props = {
 };
 
 export function HistoryTab({ group }: Props) {
+  const { uid } = useUser();
   const { entries, loading, error } = useHistory(group.id);
+  const { foods } = useFoods(group.id);
+  const { assignments } = useAssignments(group.id);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
+  const handleRestore = (entry: ShabbatHistoryEntry) => {
+    const dishCount = entry.assignments.filter((a) => !a.isPlaceholder).length;
+    if (dishCount === 0) {
+      Alert.alert(
+        'אין מאכלים לשחזור',
+        'בארכיון הזה כל השיבוצים היו "שריון לפי קטגוריה" שלא ניתנים לשחזור אוטומטי.',
+      );
+      return;
+    }
+    Alert.alert(
+      'שחזור הארוחה',
+      `${dishCount} מאכלים מהארכיון הזה יוסיפו לארוחות הנוכחיות (לפי הסעודה המקורית).\n\nשיבוצי האנשים וסימוני "הוכן" לא יועתקו — תוכל לשבץ מחדש.`,
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'שחזר',
+          onPress: async () => {
+            setRestoringId(entry.id);
+            try {
+              const result = await restoreFromHistory({
+                groupId: group.id,
+                uid,
+                archivedAssignments: entry.assignments,
+                availableFoods: foods,
+                existingAssignments: assignments,
+              });
+              const parts: string[] = [`נוספו ${result.restored} מאכלים`];
+              if (result.skippedDuplicates > 0) {
+                parts.push(`${result.skippedDuplicates} כבר היו בארוחות`);
+              }
+              if (result.skippedMissingFood > 0) {
+                parts.push(
+                  `${result.skippedMissingFood} מאכלים לא קיימים יותר בקטלוג`,
+                );
+              }
+              if (result.skippedPlaceholders > 0) {
+                parts.push(`${result.skippedPlaceholders} שיריונים דולגו`);
+              }
+              Alert.alert('שוחזר ✓', parts.join('\n'));
+            } catch {
+              Alert.alert('אופס', 'לא הצלחנו לשחזר. נסה שוב.');
+            } finally {
+              setRestoringId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleDelete = (entry: ShabbatHistoryEntry) => {
     Alert.alert(
@@ -72,9 +130,11 @@ export function HistoryTab({ group }: Props) {
           key={entry.id}
           entry={entry}
           expanded={expandedId === entry.id}
+          restoring={restoringId === entry.id}
           onToggle={() =>
             setExpandedId((curr) => (curr === entry.id ? null : entry.id))
           }
+          onRestore={() => handleRestore(entry)}
           onLongPress={() => handleDelete(entry)}
         />
       ))}
@@ -85,11 +145,20 @@ export function HistoryTab({ group }: Props) {
 type CardProps = {
   entry: ShabbatHistoryEntry;
   expanded: boolean;
+  restoring: boolean;
   onToggle: () => void;
+  onRestore: () => void;
   onLongPress: () => void;
 };
 
-function HistoryCard({ entry, expanded, onToggle, onLongPress }: CardProps) {
+function HistoryCard({
+  entry,
+  expanded,
+  restoring,
+  onToggle,
+  onRestore,
+  onLongPress,
+}: CardProps) {
   const grouped = useMemo(() => groupBySlot(entry.assignments), [entry.assignments]);
   const slotKeys = Array.from(grouped.keys());
 
@@ -162,6 +231,17 @@ function HistoryCard({ entry, expanded, onToggle, onLongPress }: CardProps) {
               );
             })
           )}
+          <View style={styles.restoreSection}>
+            <PrimaryButton
+              label="🔄 שחזר את הארוחה לארוחות הנוכחיות"
+              variant="outline"
+              onPress={onRestore}
+              loading={restoring}
+            />
+            <Text style={styles.restoreHint}>
+              המאכלים יועתקו ללא שיבוץ אדם וללא סימוני "הוכן"
+            </Text>
+          </View>
           <Text style={styles.deleteHint}>
             לחיצה ארוכה על הכרטיסייה למחיקת הארכיון
           </Text>
@@ -338,5 +418,18 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     fontStyle: 'italic',
     marginTop: spacing.xs,
+  },
+  restoreSection: {
+    gap: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  restoreHint: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    writingDirection: 'rtl',
   },
 });

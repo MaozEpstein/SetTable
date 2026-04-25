@@ -50,10 +50,21 @@ export type Food = {
   recipe?: string;
   notes?: string;
   images?: string[]; // Firebase Storage download URLs
+  isFavorite?: boolean;
   createdBy: string;
   createdAt: number;
   updatedAt?: number;
 };
+
+// Favorites first, then alphabetical (Hebrew-aware).
+export function sortFoods(foods: Food[]): Food[] {
+  return [...foods].sort((a, b) => {
+    const aFav = a.isFavorite ? 1 : 0;
+    const bFav = b.isFavorite ? 1 : 0;
+    if (aFav !== bFav) return bFav - aFav;
+    return a.name.localeCompare(b.name, 'he');
+  });
+}
 
 export type Assignment = {
   id: string;
