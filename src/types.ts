@@ -29,10 +29,19 @@ export type CustomMealSlot = {
 export type Food = {
   id: string;
   name: string;
-  category: FoodCategory;
+  categories: FoodCategory[];
+  // Legacy: older docs stored a single `category`. Read-back compat only —
+  // new writes always go to `categories`. Use getFoodCategories(food).
+  category?: FoodCategory;
   createdBy: string;
   createdAt: number;
 };
+
+export function getFoodCategories(food: Food): FoodCategory[] {
+  if (food.categories?.length) return food.categories;
+  if (food.category) return [food.category];
+  return [];
+}
 
 export type Assignment = {
   id: string;

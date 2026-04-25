@@ -18,19 +18,19 @@ function foodsCol(groupId: string) {
 type CreateFoodInput = {
   groupId: string;
   name: string;
-  category: FoodCategory;
+  categories: FoodCategory[];
   uid: string;
 };
 
 export async function createFood({
   groupId,
   name,
-  category,
+  categories,
   uid,
 }: CreateFoodInput): Promise<string> {
   const ref = await addDoc(foodsCol(groupId), {
     name: name.trim(),
-    category,
+    categories,
     createdBy: uid,
     createdAt: Date.now(),
   });

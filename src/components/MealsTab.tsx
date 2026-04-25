@@ -12,6 +12,7 @@ import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
   getAllSlots,
   getCategoryInfo,
+  getFoodCategories,
   type Assignment,
   type Food,
   type Group,
@@ -253,14 +254,19 @@ function AllAssignmentsView({
         const food = foodsById.get(a.foodId);
         const foodName = food?.name ?? '(מאכל נמחק)';
         const slotInfo = slotByKey.get(a.slot);
-        const categoryInfo = food ? getCategoryInfo(food.category) : null;
+        const categoryLabels = food
+          ? getFoodCategories(food)
+              .map((c) => getCategoryInfo(c))
+              .filter((info): info is NonNullable<typeof info> => info !== null)
+              .map((info) => `${info.emoji} ${info.label}`)
+          : [];
         const assignee = a.assignedTo ? memberByUid.get(a.assignedTo) : null;
         return (
           <FlatAssignmentRow
             key={a.id}
             assignment={a}
             foodName={foodName}
-            categoryLabel={categoryInfo ? `${categoryInfo.emoji} ${categoryInfo.label}` : null}
+            categoryLabels={categoryLabels}
             slotLabel={
               slotInfo ? `${slotInfo.emoji} ${slotInfo.shortLabel}` : '(סעודה נמחקה)'
             }
@@ -395,7 +401,7 @@ function AssignmentRow({
 type FlatRowProps = {
   assignment: Assignment;
   foodName: string;
-  categoryLabel: string | null;
+  categoryLabels: string[];
   slotLabel: string;
   assigneeName: string | null;
   onToggleDone: () => void;
@@ -406,7 +412,7 @@ type FlatRowProps = {
 function FlatAssignmentRow({
   assignment,
   foodName,
-  categoryLabel,
+  categoryLabels,
   slotLabel,
   assigneeName,
   onToggleDone,
@@ -434,11 +440,11 @@ function FlatAssignmentRow({
           {foodName}
         </Text>
         <View style={styles.tagsRow}>
-          {categoryLabel && (
-            <View style={[styles.tag, styles.tagCategory]}>
-              <Text style={styles.tagCategoryText}>{categoryLabel}</Text>
+          {categoryLabels.map((label) => (
+            <View key={label} style={[styles.tag, styles.tagCategory]}>
+              <Text style={styles.tagCategoryText}>{label}</Text>
             </View>
-          )}
+          ))}
           <View style={[styles.tag, styles.tagSlot]}>
             <Text style={styles.tagSlotText}>{slotLabel}</Text>
           </View>

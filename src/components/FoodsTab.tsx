@@ -6,7 +6,7 @@ import { useFoods } from '../hooks/useFoods';
 import { deleteAssignmentsForFood } from '../services/assignments';
 import { deleteFood } from '../services/foods';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import { FOOD_CATEGORIES, type Food, type FoodCategory } from '../types';
+import { FOOD_CATEGORIES, getFoodCategories, type Food, type FoodCategory } from '../types';
 
 type Props = {
   groupId: string;
@@ -22,7 +22,9 @@ export function FoodsTab({ groupId }: Props) {
       map.set(cat.key, []);
     }
     for (const food of foods) {
-      map.get(food.category)?.push(food);
+      for (const cat of getFoodCategories(food)) {
+        map.get(cat)?.push(food);
+      }
     }
     return map;
   }, [foods]);

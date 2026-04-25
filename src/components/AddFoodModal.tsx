@@ -26,15 +26,15 @@ type Props = {
 export function AddFoodModal({ visible, groupId, onClose }: Props) {
   const { uid } = useUser();
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<FoodCategory | null>(null);
+  const [selected, setSelected] = useState<Set<FoodCategory>>(new Set());
   const [saving, setSaving] = useState(false);
 
   const trimmed = name.trim();
-  const canSubmit = trimmed.length >= 2 && category !== null && !saving;
+  const canSubmit = trimmed.length >= 2 && selected.size > 0 && !saving;
 
   const reset = () => {
     setName('');
-    setCategory(null);
+    setSelected(new Set());
     setSaving(false);
   };
 
@@ -44,11 +44,25 @@ export function AddFoodModal({ visible, groupId, onClose }: Props) {
     onClose();
   };
 
+  const toggleCategory = (cat: FoodCategory) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
+
   const handleSave = async () => {
-    if (!canSubmit || !category) return;
+    if (!canSubmit) return;
     setSaving(true);
     try {
-      await createFood({ groupId, name: trimmed, category, uid });
+      await createFood({
+        groupId,
+        name: trimmed,
+        categories: Array.from(selected),
+        uid,
+      });
       reset();
       onClose();
     } catch (err) {
@@ -89,18 +103,23 @@ export function AddFoodModal({ visible, groupId, onClose }: Props) {
               textAlign="right"
             />
 
-            <Text style={styles.label}>קטגוריה</Text>
+            <Text style={styles.label}>
+              קטגוריות{selected.size > 0 ? ` (${selected.size})` : ''}
+            </Text>
+            <Text style={styles.subHelper}>
+              ניתן לבחור יותר מאחת — למשל אורז עם עוף שייך גם לבשר וגם לפחמימה
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chips}
             >
               {FOOD_CATEGORIES.map((cat) => {
-                const isActive = category === cat.key;
+                const isActive = selected.has(cat.key);
                 return (
                   <Pressable
                     key={cat.key}
-                    onPress={() => setCategory(cat.key)}
+                    onPress={() => toggleCategory(cat.key)}
                     style={({ pressed }) => [
                       styles.chip,
                       isActive && styles.chipActive,
@@ -111,6 +130,7 @@ export function AddFoodModal({ visible, groupId, onClose }: Props) {
                     <Text style={[styles.chipLabel, isActive && styles.chipLabelActive]}>
                       {cat.label}
                     </Text>
+                    {isActive && <Text style={styles.chipCheck}>✓</Text>}
                   </Pressable>
                 );
               })}
@@ -231,6 +251,20 @@ const styles = StyleSheet.create({
   chipLabelActive: {
     color: colors.primaryDark,
     fontFamily: fontFamily.bold,
+  },
+  chipCheck: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bold,
+    color: colors.primary,
+    marginRight: 2,
+  },
+  subHelper: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginBottom: spacing.xs,
   },
   actions: {
     flexDirection: 'row',
