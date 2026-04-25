@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { FoodsTab } from '../components/FoodsTab';
+import { HistoryTab } from '../components/HistoryTab';
 import { MealsTab } from '../components/MealsTab';
 import { MembersTab } from '../components/MembersTab';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -11,12 +12,13 @@ import { useGroup } from '../hooks/useGroup';
 import { colors, fontFamily, fontSize, spacing } from '../theme';
 import type { RootStackScreenProps } from '../navigation/types';
 
-type TabKey = 'meals' | 'foods' | 'members';
+type TabKey = 'meals' | 'foods' | 'members' | 'history';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'meals', label: 'ארוחות' },
   { key: 'foods', label: 'מאכלים' },
   { key: 'members', label: 'חברים' },
+  { key: 'history', label: 'היסטוריה' },
 ];
 
 export function GroupScreen({
@@ -75,6 +77,7 @@ export function GroupScreen({
         {activeTab === 'meals' && <MealsTab group={group} />}
         {activeTab === 'foods' && <FoodsTab group={group} />}
         {activeTab === 'members' && <MembersTab group={group} />}
+        {activeTab === 'history' && <HistoryTab group={group} />}
       </ScrollView>
     </SafeAreaView>
   );

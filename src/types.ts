@@ -70,6 +70,29 @@ export function isPlaceholderAssignment(a: Assignment): boolean {
   return !a.foodId;
 }
 
+// Snapshot stored in the history collection. All names are denormalized
+// so the entry stays readable even if foods/categories/slots/members are
+// later renamed or deleted.
+export type ArchivedAssignment = {
+  foodName: string;
+  isPlaceholder: boolean;
+  slot: string;
+  slotLabel: string;
+  slotEmoji: string;
+  assigneeName: string | null;
+  done: boolean;
+  categoryLabels: string[];
+};
+
+export type ShabbatHistoryEntry = {
+  id: string;
+  archivedAt: number;
+  archivedBy: string;
+  archivedByName: string;
+  assignmentCount: number;
+  assignments: ArchivedAssignment[];
+};
+
 export type Group = {
   id: string;
   name: string;

@@ -11,6 +11,8 @@ import { useAssignments } from '../hooks/useAssignments';
 import { useFoods } from '../hooks/useFoods';
 import { deleteAssignment, setDone } from '../services/assignments';
 import { removeCustomSlot } from '../services/groups';
+import { archiveAndClearAssignments } from '../services/history';
+import { PrimaryButton } from './PrimaryButton';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
   getAllAssignees,
@@ -19,6 +21,7 @@ import {
   getCategoryInfo,
   getFoodCategories,
   isPlaceholderAssignment,
+  type ArchivedAssignment,
   type Assignment,
   type AssigneeInfo,
   type Food,
@@ -32,7 +35,8 @@ type Props = {
 
 export function MealsTab({ group }: Props) {
   const groupId = group.id;
-  const { uid } = useUser();
+  const { uid, userName } = useUser();
+  const [endingShabbat, setEndingShabbat] = useState(false);
   const { assignments, loading: loadingAssignments } = useAssignments(groupId);
   const { foods } = useFoods(groupId);
 
@@ -143,6 +147,81 @@ export function MealsTab({ group }: Props) {
     };
   };
 
+  const buildArchivedSnapshot = (): ArchivedAssignment[] => {
+    return assignments.map((a) => {
+      const isPlaceholder = isPlaceholderAssignment(a);
+      const food = a.foodId ? foodsById.get(a.foodId) : undefined;
+      const placeholderCat = a.placeholderCategory
+        ? getCategoryInfo(group, a.placeholderCategory)
+        : null;
+      const foodName = isPlaceholder
+        ? placeholderCat
+          ? `${placeholderCat.emoji} ${placeholderCat.label}`
+          : 'קטגוריה לא ידועה'
+        : (food?.name ?? '(מאכל נמחק)');
+      const slotInfo = slotByKey.get(a.slot);
+      const assignee = a.assignedTo ? assigneeById.get(a.assignedTo) : null;
+      const categoryLabels = food
+        ? getFoodCategories(food)
+            .map((c) => getCategoryInfo(group, c))
+            .filter((info): info is NonNullable<typeof info> => info !== null)
+            .map((info) => `${info.emoji} ${info.label}`)
+        : [];
+      return {
+        foodName,
+        isPlaceholder,
+        slot: a.slot,
+        slotLabel: slotInfo?.label ?? '(סעודה נמחקה)',
+        slotEmoji: slotInfo?.emoji ?? '📋',
+        assigneeName: assignee?.name ?? null,
+        done: !!a.done,
+        categoryLabels,
+      };
+    });
+  };
+
+  const handleEndShabbat = () => {
+    if (assignments.length === 0) {
+      Alert.alert(
+        'אין מה לארכב',
+        'אין שיבוצים פעילים לארוחות בכלל. הוסף מאכלים לארוחות לפני שתסיים שבת.',
+      );
+      return;
+    }
+    Alert.alert(
+      '🕯️ שבת הסתיימה',
+      `האם אתה בטוח?\n\n${assignments.length} השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" וכל הארוחות יתאפסו.\n\nהמאכלים בקטלוג, החברים, הקטגוריות והסעודות המותאמות יישארו ללא שינוי.`,
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'כן, נקה ארוחות',
+          style: 'destructive',
+          onPress: async () => {
+            setEndingShabbat(true);
+            try {
+              const snapshot = buildArchivedSnapshot();
+              await archiveAndClearAssignments({
+                groupId,
+                archivedBy: uid,
+                archivedByName: userName,
+                assignments: snapshot,
+              });
+              Alert.alert(
+                'נקה בהצלחה ✓',
+                `נשמרו ${snapshot.length} שיבוצים בהיסטוריה. שבת חדשה — מתחילים מחדש.`,
+              );
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
+              Alert.alert('אופס', `לא הצלחנו לנקות.\n${message}`);
+            } finally {
+              setEndingShabbat(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleRowPress = (a: Assignment, foodName: string) => {
     if (isPlaceholderAssignment(a)) {
       setReplacingPlaceholder({
@@ -248,6 +327,20 @@ export function MealsTab({ group }: Props) {
           categories={categories}
           onClose={() => setReplacingPlaceholder(null)}
         />
+      )}
+
+      {assignments.length > 0 && (
+        <View style={styles.endShabbatSection}>
+          <PrimaryButton
+            label="🕯️ שבת הסתיימה — נקה ארוחות"
+            variant="outline"
+            onPress={handleEndShabbat}
+            loading={endingShabbat}
+          />
+          <Text style={styles.endShabbatHint}>
+            השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" לפני הניקוי
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -642,6 +735,20 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     color: colors.warning,
     fontStyle: 'italic',
+  },
+  endShabbatSection: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.xs,
+  },
+  endShabbatHint: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    writingDirection: 'rtl',
   },
   rowDone: {
     backgroundColor: '#F1F5EC',
