@@ -1,19 +1,116 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, I18nManager, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  Heebo_400Regular,
+  Heebo_500Medium,
+  Heebo_700Bold,
+  useFonts,
+} from '@expo-google-fonts/heebo';
+import { UserProvider } from './src/context/UserContext';
+import { isFirebaseConfigured } from './src/firebase';
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { FirebaseSetupScreen } from './src/screens/FirebaseSetupScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { ensureAnonymousAuth } from './src/services/auth';
+import { getUserName } from './src/storage';
+import { colors } from './src/theme';
+
+if (!I18nManager.isRTL) {
+  I18nManager.allowRTL(true);
+  I18nManager.forceRTL(true);
+}
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Heebo_400Regular,
+    Heebo_500Medium,
+    Heebo_700Bold,
+  });
+
+  const [userName, setUserName] = useState<string | null>(null);
+  const [nameChecked, setNameChecked] = useState(false);
+  const [uid, setUid] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getUserName().then((name) => {
+      setUserName(name);
+      setNameChecked(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+    if (!userName) return;
+    if (uid) return;
+
+    ensureAnonymousAuth()
+      .then((user) => setUid(user.uid))
+      .catch((err) => {
+        setAuthError(err instanceof Error ? err.message : String(err));
+      });
+  }, [userName, uid]);
+
+  if (!fontsLoaded || !nameChecked) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.primary} size="large" />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!isFirebaseConfigured) {
+    return (
+      <SafeAreaProvider>
+        <FirebaseSetupScreen />
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!userName) {
+    return (
+      <SafeAreaProvider>
+        <OnboardingScreen onComplete={(name) => setUserName(name)} />
+      </SafeAreaProvider>
+    );
+  }
+
+  if (authError) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.primary} size="large" />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!uid) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.primary} size="large" />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <UserProvider uid={uid} userName={userName}>
+        <RootNavigator />
+      </UserProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loading: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
