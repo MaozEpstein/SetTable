@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -20,7 +20,25 @@ type Props = {
 
 export function ImageViewerModal({ visible, images, initialIndex, onClose }: Props) {
   const [index, setIndex] = useState(initialIndex);
+  const scrollRef = useRef<ScrollView>(null);
   const { width, height } = Dimensions.get('window');
+
+  // Modal stays mounted between opens, so we have to manually sync the
+  // visible page each time the parent passes a new initialIndex.
+  useEffect(() => {
+    if (!visible) return;
+    setIndex(initialIndex);
+    // Defer scroll until after layout — without this the ScrollView
+    // hasn't measured yet on the first frame after visible flips on.
+    const handle = requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({
+        x: initialIndex * width,
+        y: 0,
+        animated: false,
+      });
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [visible, initialIndex, width]);
 
   if (images.length === 0) return null;
 
@@ -32,10 +50,10 @@ export function ImageViewerModal({ visible, images, initialIndex, onClose }: Pro
         </Pressable>
 
         <ScrollView
+          ref={scrollRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          contentOffset={{ x: initialIndex * width, y: 0 }}
           onMomentumScrollEnd={(e) => {
             const i = Math.round(e.nativeEvent.contentOffset.x / width);
             setIndex(i);
