@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { CategoryTabs, type CategorySubTab } from './CategoryTabs';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
 import { useFoods } from '../hooks/useFoods';
@@ -38,7 +39,10 @@ export function AddFoodToSlotModal({
 }: Props) {
   const { uid } = useUser();
   const { foods, loading } = useFoods(groupId);
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<CategorySubTab>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+
   const usedFoodIds = useMemo(
     () => new Set(existingAssignments.map((a) => a.foodId)),
     [existingAssignments],
@@ -57,36 +61,90 @@ export function AddFoodToSlotModal({
     return map;
   }, [foods, categories]);
 
-  const handlePick = async (food: Food) => {
-    if (usedFoodIds.has(food.id) || savingId) return;
-    setSavingId(food.id);
+  const countsByCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const cat of categories) {
+      counts[cat.key] = grouped.get(cat.key)?.length ?? 0;
+    }
+    return counts;
+  }, [grouped, categories]);
+
+  const sectionsToShow =
+    activeCategory === 'all'
+      ? categories
+      : categories.filter((c) => c.key === activeCategory);
+
+  const handleClose = () => {
+    if (saving) return;
+    setSelectedIds(new Set());
+    setActiveCategory('all');
+    onClose();
+  };
+
+  const toggleFood = (food: Food) => {
+    if (usedFoodIds.has(food.id) || saving) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(food.id)) next.delete(food.id);
+      else next.add(food.id);
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    if (selectedIds.size === 0 || saving) return;
+    setSaving(true);
     try {
-      await createAssignment({ groupId, foodId: food.id, slot, uid });
+      await Promise.all(
+        Array.from(selectedIds).map((foodId) =>
+          createAssignment({ groupId, foodId, slot, uid }),
+        ),
+      );
+      setSelectedIds(new Set());
+      setActiveCategory('all');
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
       Alert.alert('אופס', `לא הצלחנו לשבץ.\n${message}`);
     } finally {
-      setSavingId(null);
+      setSaving(false);
     }
   };
+
+  const selectionCount = selectedIds.size;
+  const addLabel =
+    selectionCount === 0
+      ? 'בחר מאכלים להוספה'
+      : selectionCount === 1
+        ? 'הוסף מאכל אחד'
+        : `הוסף ${selectionCount} מאכלים`;
 
   return (
     <Modal
       visible={visible}
       animationType="slide"
       transparent
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={styles.backdrop} onPress={handleClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
           <Text style={styles.title}>
             הוסף ל{slotEmoji} {slotLabel}
           </Text>
           <Text style={styles.helper}>
-            בחר מאכל מרשימת המאכלים של הקבוצה
+            סנן לפי קטגוריה ובחר מאכל אחד או יותר
           </Text>
+
+          <View style={styles.tabsWrap}>
+            <CategoryTabs
+              categories={categories}
+              active={activeCategory}
+              onChange={setActiveCategory}
+              countsByCategory={countsByCategory}
+              totalCount={foods.length}
+            />
+          </View>
 
           <ScrollView
             style={styles.list}
@@ -104,38 +162,52 @@ export function AddFoodToSlotModal({
                 </Text>
               </View>
             ) : (
-              categories.map((cat) => {
+              sectionsToShow.map((cat) => {
                 const items = grouped.get(cat.key) ?? [];
                 if (items.length === 0) return null;
                 return (
                   <View key={cat.key} style={styles.section}>
-                    <Text style={styles.sectionTitle}>
-                      {cat.emoji} {cat.label}
-                    </Text>
+                    {activeCategory === 'all' && (
+                      <Text style={styles.sectionTitle}>
+                        {cat.emoji} {cat.label}
+                      </Text>
+                    )}
                     {items.map((food) => {
                       const used = usedFoodIds.has(food.id);
-                      const saving = savingId === food.id;
+                      const selected = selectedIds.has(food.id);
                       return (
                         <Pressable
-                          key={food.id}
-                          onPress={() => handlePick(food)}
-                          disabled={used || saving}
+                          key={`${cat.key}-${food.id}`}
+                          onPress={() => toggleFood(food)}
+                          disabled={used}
                           style={({ pressed }) => [
                             styles.foodRow,
+                            selected && styles.foodRowSelected,
                             used && styles.foodRowUsed,
-                            { opacity: pressed && !used ? 0.6 : 1 },
+                            { opacity: pressed && !used ? 0.7 : 1 },
                           ]}
                         >
-                          <Text style={[styles.foodName, used && styles.foodNameUsed]}>
+                          <View
+                            style={[
+                              styles.checkbox,
+                              selected && styles.checkboxSelected,
+                              used && styles.checkboxUsed,
+                            ]}
+                          >
+                            {(selected || used) && (
+                              <Text style={styles.checkboxMark}>✓</Text>
+                            )}
+                          </View>
+                          <Text
+                            style={[
+                              styles.foodName,
+                              used && styles.foodNameUsed,
+                              selected && styles.foodNameSelected,
+                            ]}
+                          >
                             {food.name}
                           </Text>
-                          {used ? (
-                            <Text style={styles.usedTag}>כבר בסעודה</Text>
-                          ) : saving ? (
-                            <Text style={styles.savingTag}>מוסיף...</Text>
-                          ) : (
-                            <Text style={styles.addIcon}>+</Text>
-                          )}
+                          {used && <Text style={styles.usedTag}>כבר בסעודה</Text>}
                         </Pressable>
                       );
                     })}
@@ -145,7 +217,24 @@ export function AddFoodToSlotModal({
             )}
           </ScrollView>
 
-          <PrimaryButton label="סגור" variant="outline" onPress={onClose} />
+          <View style={styles.footer}>
+            <View style={styles.footerHalf}>
+              <PrimaryButton
+                label="ביטול"
+                variant="outline"
+                onPress={handleClose}
+                disabled={saving}
+              />
+            </View>
+            <View style={styles.footerHalf}>
+              <PrimaryButton
+                label={addLabel}
+                onPress={handleSave}
+                disabled={selectionCount === 0 || saving}
+                loading={saving}
+              />
+            </View>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -165,7 +254,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xl,
     gap: spacing.sm,
-    maxHeight: '85%',
+    maxHeight: '90%',
   },
   handle: {
     width: 40,
@@ -190,13 +279,11 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     marginBottom: spacing.sm,
   },
-  list: {
-    flexGrow: 0,
+  tabsWrap: {
+    marginBottom: spacing.sm,
   },
-  listContent: {
-    gap: spacing.md,
-    paddingBottom: spacing.md,
-  },
+  list: { flexGrow: 0 },
+  listContent: { gap: spacing.md, paddingBottom: spacing.md },
   empty: {
     textAlign: 'center',
     color: colors.textMuted,
@@ -237,17 +324,44 @@ const styles = StyleSheet.create({
   foodRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: colors.surface,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
-    gap: spacing.sm,
+    gap: spacing.md,
+  },
+  foodRowSelected: {
+    borderColor: colors.primary,
+    backgroundColor: '#FBEFD9',
   },
   foodRowUsed: {
-    opacity: 0.5,
+    opacity: 0.55,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkboxUsed: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+  checkboxMark: {
+    color: '#FFFFFF',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bold,
+    lineHeight: fontSize.sm + 2,
   },
   foodName: {
     flex: 1,
@@ -257,6 +371,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  foodNameSelected: {
+    fontFamily: fontFamily.bold,
+    color: colors.primaryDark,
+  },
   foodNameUsed: {
     color: colors.textMuted,
   },
@@ -265,16 +383,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     color: colors.success,
   },
-  savingTag: {
-    fontSize: fontSize.xs,
-    fontFamily: fontFamily.medium,
-    color: colors.primary,
+  footer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  addIcon: {
-    fontSize: fontSize.xxl,
-    color: colors.primary,
-    fontFamily: fontFamily.bold,
-    width: 24,
-    textAlign: 'center',
-  },
+  footerHalf: { flex: 1 },
 });
