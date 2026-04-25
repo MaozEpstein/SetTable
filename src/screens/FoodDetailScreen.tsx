@@ -158,8 +158,19 @@ export function FoodDetailScreen({
       );
       await addImageToFood(groupId, foodId, manipulated.uri);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו להעלות תמונה.\n${message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      const isStorageNotEnabled =
+        message.includes('storage/unknown') ||
+        message.includes('storage/unauthorized') ||
+        message.includes('storage/object-not-found');
+      if (isStorageNotEnabled) {
+        Alert.alert(
+          'Firebase Storage לא מוגדר',
+          'כדי להעלות תמונות צריך:\n\n1. ב-Firebase Console: Build → Storage → Get started\n2. בלשונית Rules להדביק את החוקים מה-README ולפרסם\n\n(הפרטים המלאים בקובץ README.md)',
+        );
+      } else {
+        Alert.alert('אופס', `לא הצלחנו להעלות תמונה.\n${message}`);
+      }
     } finally {
       setUploadingImage(false);
     }
@@ -228,7 +239,9 @@ export function FoodDetailScreen({
       {saving ? (
         <ActivityIndicator color={colors.primary} size="small" />
       ) : (
-        <Text style={styles.headerActionText}>שמור</Text>
+        <Text style={styles.headerActionText} numberOfLines={1}>
+          שמור
+        </Text>
       )}
     </Pressable>
   ) : (
@@ -240,7 +253,9 @@ export function FoodDetailScreen({
         { opacity: pressed ? 0.5 : 1 },
       ]}
     >
-      <Text style={styles.headerActionText}>✏️ ערוך</Text>
+      <Text style={styles.headerActionText} numberOfLines={1}>
+        ✏️ ערוך
+      </Text>
     </Pressable>
   );
 
