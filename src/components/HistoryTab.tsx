@@ -7,6 +7,7 @@ import { useFoods } from '../hooks/useFoods';
 import { useHistory } from '../hooks/useHistory';
 import { deleteHistoryEntry, restoreFromHistory } from '../services/history';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
+import { getHebrewContext } from '../utils/hebrewCalendar';
 import {
   eventLabel,
   eventTypeOf,
@@ -161,6 +162,13 @@ function HistoryCard({
 }: CardProps) {
   const grouped = useMemo(() => groupBySlot(entry.assignments), [entry.assignments]);
   const slotKeys = Array.from(grouped.keys());
+  const hebrew = useMemo(
+    () => getHebrewContext(new Date(entry.archivedAt)),
+    [entry.archivedAt],
+  );
+  const subBits: string[] = [hebrew.hebrewDate];
+  if (hebrew.holiday) subBits.push(`🌟 ${hebrew.holiday}`);
+  if (hebrew.parsha) subBits.push(hebrew.parsha);
 
   return (
     <View style={styles.card}>
@@ -174,6 +182,7 @@ function HistoryCard({
       >
         <View style={styles.cardHeaderMain}>
           <Text style={styles.cardTitle}>{formatTitle(entry)}</Text>
+          <Text style={styles.cardHebrew}>{subBits.join(' · ')}</Text>
           <Text style={styles.cardSubtitle}>
             {entry.assignmentCount}{' '}
             {entry.assignmentCount === 1 ? 'מאכל' : 'מאכלים'}
@@ -325,6 +334,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.bold,
     color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  cardHebrew: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+    color: colors.secondary,
     textAlign: 'right',
     writingDirection: 'rtl',
   },

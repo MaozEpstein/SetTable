@@ -12,6 +12,7 @@ import { useFoods } from '../hooks/useFoods';
 import { deleteAssignment, setDone } from '../services/assignments';
 import { removeCustomSlot } from '../services/groups';
 import { archiveAndClearAssignments } from '../services/history';
+import { getHebrewContext } from '../utils/hebrewCalendar';
 import { PrimaryButton } from './PrimaryButton';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
@@ -190,15 +191,29 @@ export function MealsTab({ group }: Props) {
       );
       return;
     }
-    const detectedType = detectEventType(Date.now());
-    const detectedLabel = eventLabel(detectedType); // "שבת" / "חג"
+    const now = Date.now();
+    const detectedType = detectEventType(now);
+    const baseLabel = eventLabel(detectedType); // "שבת" / "חג"
+    const hebrew = getHebrewContext(new Date(now));
+    // If it's a known holiday, prefer that specific name; otherwise use parsha for shabbat
+    let detailLabel = baseLabel;
+    const detailParts: string[] = [];
+    if (hebrew.holiday) {
+      detailLabel = hebrew.holiday;
+      detailParts.push(`מזוהה כ-${detailLabel}`);
+    } else if (detectedType === 'shabbat' && hebrew.parsha) {
+      detailParts.push(`מזוהה כ-${baseLabel} (${hebrew.parsha})`);
+    } else {
+      detailParts.push(`מזוהה כ-${baseLabel} (לפי היום בשבוע)`);
+    }
+    detailParts.push(`תאריך עברי: ${hebrew.hebrewDate}`);
     Alert.alert(
-      `🕯️ סיום ${detectedLabel}`,
-      `מזוהה כ-${detectedLabel} (לפי היום בשבוע).\n\n${assignments.length} השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" וכל הארוחות יתאפסו.\n\nהמאכלים בקטלוג, החברים, הקטגוריות והסעודות המותאמות יישארו ללא שינוי.`,
+      `🕯️ סיום ${detailLabel}`,
+      `${detailParts.join('\n')}\n\n${assignments.length} השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" וכל הארוחות יתאפסו.\n\nהמאכלים בקטלוג, החברים, הקטגוריות והסעודות המותאמות יישארו ללא שינוי.`,
       [
         { text: 'ביטול', style: 'cancel' },
         {
-          text: `כן, סיום ${detectedLabel}`,
+          text: `כן, סיום ${baseLabel}`,
           style: 'destructive',
           onPress: async () => {
             setEndingShabbat(true);
@@ -212,7 +227,7 @@ export function MealsTab({ group }: Props) {
               });
               Alert.alert(
                 'נשמר בהצלחה ✓',
-                `נשמרו ${snapshot.length} שיבוצים ב-${detectedLabel} בהיסטוריה. ${detectedLabel === 'שבת' ? 'שבת חדשה' : 'חג חדש'} — מתחילים מחדש.`,
+                `נשמרו ${snapshot.length} שיבוצים ב-${detailLabel} בהיסטוריה. ${baseLabel === 'שבת' ? 'שבת חדשה' : 'חג חדש'} — מתחילים מחדש.`,
               );
             } catch (err) {
               const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';

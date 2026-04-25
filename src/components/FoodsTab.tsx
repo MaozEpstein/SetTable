@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AddCategoryModal } from './AddCategoryModal';
@@ -31,11 +31,18 @@ export function FoodsTab({ group }: Props) {
   const [foodModalVisible, setFoodModalVisible] = useState(false);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<CategorySubTab>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const categories = useMemo(() => getAllCategories(group), [group]);
 
+  const filteredFoods = useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q) return foods;
+    return foods.filter((f) => f.name.includes(q));
+  }, [foods, searchQuery]);
+
   const grouped = useMemo(() => {
-    const sorted = sortFoods(foods);
+    const sorted = sortFoods(filteredFoods);
     const map = new Map<string, Food[]>();
     for (const cat of categories) map.set(cat.key, []);
     for (const food of sorted) {
@@ -44,7 +51,7 @@ export function FoodsTab({ group }: Props) {
       }
     }
     return map;
-  }, [foods, categories]);
+  }, [filteredFoods, categories]);
 
   const countsByCategory = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -55,8 +62,8 @@ export function FoodsTab({ group }: Props) {
   }, [grouped, categories]);
 
   const favorites = useMemo(
-    () => sortFoods(foods.filter((f) => f.isFavorite)),
-    [foods],
+    () => sortFoods(filteredFoods.filter((f) => f.isFavorite)),
+    [filteredFoods],
   );
 
   const handleOpenFood = (food: Food) => {
@@ -115,6 +122,29 @@ export function FoodsTab({ group }: Props) {
         />
       </View>
 
+      <View style={styles.searchWrap}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="חיפוש מאכל..."
+          placeholderTextColor={colors.textMuted}
+          style={styles.searchInput}
+          textAlign="right"
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+        {searchQuery.length > 0 && (
+          <Pressable
+            onPress={() => setSearchQuery('')}
+            hitSlop={8}
+            style={styles.clearBtn}
+          >
+            <Text style={styles.clearBtnText}>✕</Text>
+          </Pressable>
+        )}
+      </View>
+
       <CategoryTabs
         categories={categories}
         active={activeTab}
@@ -133,6 +163,14 @@ export function FoodsTab({ group }: Props) {
           <Text style={styles.emptyText}>
             הוסיפו מאכלים שהקבוצה עשויה להכין לשבת{'\n'}
             (למשל "חמין", "סלט ירקות", "קוגל")
+          </Text>
+        </View>
+      ) : filteredFoods.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyEmoji}>🔍</Text>
+          <Text style={styles.emptyTitle}>אין תוצאות לחיפוש</Text>
+          <Text style={styles.emptyText}>
+            לא נמצאו מאכלים שמכילים "{searchQuery}"
           </Text>
         </View>
       ) : activeTab === 'favorites' ? (
@@ -333,5 +371,34 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     color: colors.textMuted,
     fontFamily: fontFamily.regular,
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  searchIcon: {
+    fontSize: fontSize.md,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.regular,
+    color: colors.text,
+    writingDirection: 'rtl',
+  },
+  clearBtn: {
+    paddingHorizontal: spacing.xs,
+  },
+  clearBtnText: {
+    fontSize: fontSize.md,
+    color: colors.textMuted,
+    fontFamily: fontFamily.bold,
   },
 });
