@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AddFoodToSlotModal } from './AddFoodToSlotModal';
 import { AssigneePickerModal } from './AssigneePickerModal';
+import { MealSlotTabs, type MealSubTab } from './MealSlotTabs';
 import { useAssignments } from '../hooks/useAssignments';
 import { useFoods } from '../hooks/useFoods';
 import { deleteAssignment, setDone } from '../services/assignments';
@@ -17,6 +18,7 @@ export function MealsTab({ group }: Props) {
   const { assignments, loading: loadingAssignments } = useAssignments(groupId);
   const { foods } = useFoods(groupId);
 
+  const [activeSubTab, setActiveSubTab] = useState<MealSubTab>('all');
   const [addingToSlot, setAddingToSlot] = useState<MealSlot | null>(null);
   const [editingAssignment, setEditingAssignment] = useState<{
     id: string;
@@ -39,6 +41,14 @@ export function MealsTab({ group }: Props) {
     }
     return map;
   }, [assignments]);
+
+  const countsBySlot = useMemo(() => {
+    const counts: Partial<Record<MealSlot, number>> = {};
+    for (const slot of MEAL_SLOTS) {
+      counts[slot.key] = bySlot.get(slot.key)?.length ?? 0;
+    }
+    return counts;
+  }, [bySlot]);
 
   const members = Object.values(group.members ?? {});
   const memberByUid = useMemo(() => {
@@ -70,64 +80,76 @@ export function MealsTab({ group }: Props) {
     );
   };
 
-  const editingMembers = members;
+  const slotsToShow =
+    activeSubTab === 'all'
+      ? MEAL_SLOTS
+      : MEAL_SLOTS.filter((s) => s.key === activeSubTab);
 
   return (
     <View style={styles.container}>
-      {MEAL_SLOTS.map((slot) => {
-        const items = bySlot.get(slot.key) ?? [];
-        return (
-          <View key={slot.key} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                {slot.emoji} {slot.label}
-                {items.length > 0 && (
-                  <Text style={styles.count}> · {items.length}</Text>
-                )}
-              </Text>
+      <MealSlotTabs
+        active={activeSubTab}
+        onChange={setActiveSubTab}
+        countsBySlot={countsBySlot}
+        totalCount={assignments.length}
+      />
+
+      <View style={styles.sections}>
+        {slotsToShow.map((slot) => {
+          const items = bySlot.get(slot.key) ?? [];
+          return (
+            <View key={slot.key} style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  {slot.emoji} {slot.label}
+                  {items.length > 0 && (
+                    <Text style={styles.count}> · {items.length}</Text>
+                  )}
+                </Text>
+              </View>
+
+              {items.length === 0 ? (
+                <Text style={styles.emptyText}>אין עדיין מאכלים ששובצו</Text>
+              ) : (
+                items.map((a) => {
+                  const food = foodsById.get(a.foodId);
+                  const assignee = a.assignedTo ? memberByUid.get(a.assignedTo) : null;
+                  const foodName = food?.name ?? '(מאכל נמחק)';
+                  return (
+                    <AssignmentRow
+                      key={a.id}
+                      assignment={a}
+                      foodName={foodName}
+                      assigneeName={assignee?.name ?? null}
+                      onToggleDone={() => handleToggleDone(a)}
+                      onChangeAssignee={() =>
+                        setEditingAssignment({
+                          id: a.id,
+                          foodName,
+                          slot: a.slot,
+                          assignedTo: a.assignedTo,
+                        })
+                      }
+                      onLongPress={() => handleDelete(a, foodName)}
+                    />
+                  );
+                })
+              )}
+
+              <Pressable
+                onPress={() => setAddingToSlot(slot.key)}
+                style={({ pressed }) => [
+                  styles.addRow,
+                  { opacity: pressed ? 0.6 : 1 },
+                ]}
+              >
+                <Text style={styles.addIcon}>+</Text>
+                <Text style={styles.addText}>הוסף מאכל</Text>
+              </Pressable>
             </View>
-
-            {items.length === 0 ? (
-              <Text style={styles.emptyText}>אין עדיין מאכלים ששובצו</Text>
-            ) : (
-              items.map((a) => {
-                const food = foodsById.get(a.foodId);
-                const assignee = a.assignedTo ? memberByUid.get(a.assignedTo) : null;
-                const foodName = food?.name ?? '(מאכל נמחק)';
-                return (
-                  <AssignmentRow
-                    key={a.id}
-                    assignment={a}
-                    foodName={foodName}
-                    assigneeName={assignee?.name ?? null}
-                    onToggleDone={() => handleToggleDone(a)}
-                    onChangeAssignee={() =>
-                      setEditingAssignment({
-                        id: a.id,
-                        foodName,
-                        slot: a.slot,
-                        assignedTo: a.assignedTo,
-                      })
-                    }
-                    onLongPress={() => handleDelete(a, foodName)}
-                  />
-                );
-              })
-            )}
-
-            <Pressable
-              onPress={() => setAddingToSlot(slot.key)}
-              style={({ pressed }) => [
-                styles.addRow,
-                { opacity: pressed ? 0.6 : 1 },
-              ]}
-            >
-              <Text style={styles.addIcon}>+</Text>
-              <Text style={styles.addText}>הוסף מאכל</Text>
-            </Pressable>
-          </View>
-        );
-      })}
+          );
+        })}
+      </View>
 
       {loadingAssignments && (
         <Text style={styles.loadingText}>טוען שיבוצים...</Text>
@@ -151,7 +173,7 @@ export function MealsTab({ group }: Props) {
           assignmentId={editingAssignment.id}
           foodName={editingAssignment.foodName}
           slot={editingAssignment.slot}
-          members={editingMembers}
+          members={members}
           currentAssigneeUid={editingAssignment.assignedTo}
           onClose={() => setEditingAssignment(null)}
         />
@@ -220,6 +242,9 @@ function AssignmentRow({
 
 const styles = StyleSheet.create({
   container: {
+    gap: spacing.md,
+  },
+  sections: {
     gap: spacing.lg,
   },
   section: {

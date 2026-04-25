@@ -53,10 +53,10 @@ export const FOOD_CATEGORIES: { key: FoodCategory; label: string; emoji: string 
   { key: 'cake', label: 'עוגות', emoji: '🎂' },
 ];
 
-export const MEAL_SLOTS: { key: MealSlot; label: string; emoji: string }[] = [
-  { key: 'friday_night', label: 'סעודת ערב שבת', emoji: '🌙' },
-  { key: 'kiddush', label: 'קידוש', emoji: '🍷' },
-  { key: 'saturday_lunch', label: 'סעודת צהריי שבת', emoji: '☀️' },
-  { key: 'third_meal', label: 'סעודה שלישית', emoji: '🌅' },
-  { key: 'general', label: 'כללי', emoji: '📋' },
+export const MEAL_SLOTS: { key: MealSlot; label: string; shortLabel: string; emoji: string }[] = [
+  { key: 'friday_night', label: 'סעודת ערב שבת', shortLabel: 'ערב שבת', emoji: '🌙' },
+  { key: 'kiddush', label: 'קידוש', shortLabel: 'קידוש', emoji: '🍷' },
+  { key: 'saturday_lunch', label: 'סעודת צהריי שבת', shortLabel: 'צהריים', emoji: '☀️' },
+  { key: 'third_meal', label: 'סעודה שלישית', shortLabel: 'שלישית', emoji: '🌅' },
+  { key: 'general', label: 'כללי', shortLabel: 'כללי', emoji: '📋' },
 ];
