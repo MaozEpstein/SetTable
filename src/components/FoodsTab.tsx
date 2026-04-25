@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AddCategoryModal } from './AddCategoryModal';
 import { AddFoodModal } from './AddFoodModal';
 import { CategoryTabs, type CategorySubTab } from './CategoryTabs';
 import { PrimaryButton } from './PrimaryButton';
 import { useFoods } from '../hooks/useFoods';
-import { deleteAssignmentsForFood } from '../services/assignments';
-import { deleteFood } from '../services/foods';
 import { removeCustomCategory } from '../services/groups';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
@@ -16,6 +16,7 @@ import {
   type Food,
   type Group,
 } from '../types';
+import type { RootStackParamList } from '../navigation/types';
 
 type Props = {
   group: Group;
@@ -23,6 +24,8 @@ type Props = {
 
 export function FoodsTab({ group }: Props) {
   const groupId = group.id;
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { foods, loading, error } = useFoods(groupId);
   const [foodModalVisible, setFoodModalVisible] = useState(false);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
@@ -49,26 +52,8 @@ export function FoodsTab({ group }: Props) {
     return counts;
   }, [grouped, categories]);
 
-  const handleDelete = (food: Food) => {
-    Alert.alert(
-      'מחיקת מאכל',
-      `למחוק את "${food.name}"?\nכל השיבוצים שלו לארוחות יימחקו גם.`,
-      [
-        { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'מחק',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteAssignmentsForFood(groupId, food.id);
-              await deleteFood(groupId, food.id);
-            } catch {
-              Alert.alert('אופס', 'לא הצלחנו למחוק. נסה שוב.');
-            }
-          },
-        },
-      ],
-    );
+  const handleOpenFood = (food: Food) => {
+    navigation.navigate('FoodDetail', { groupId, foodId: food.id });
   };
 
   const handleLongPressCategory = (cat: CategoryInfo) => {
@@ -161,7 +146,7 @@ export function FoodsTab({ group }: Props) {
                   <FoodRow
                     key={food.id}
                     food={food}
-                    onLongPress={() => handleDelete(food)}
+                    onPress={() => handleOpenFood(food)}
                   />
                 ))
               )}
@@ -175,6 +160,9 @@ export function FoodsTab({ group }: Props) {
         groupId={groupId}
         categories={categories}
         onClose={() => setFoodModalVisible(false)}
+        onCreated={(newFoodId) =>
+          navigation.navigate('FoodDetail', { groupId, foodId: newFoodId })
+        }
       />
 
       <AddCategoryModal
@@ -186,13 +174,29 @@ export function FoodsTab({ group }: Props) {
   );
 }
 
-function FoodRow({ food, onLongPress }: { food: Food; onLongPress: () => void }) {
+function FoodRow({ food, onPress }: { food: Food; onPress: () => void }) {
+  const hasDetails =
+    !!food.recipe?.trim() ||
+    !!food.notes?.trim() ||
+    (food.images?.length ?? 0) > 0;
   return (
     <Pressable
-      onLongPress={onLongPress}
+      onPress={onPress}
       style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
     >
       <Text style={styles.foodName}>{food.name}</Text>
+      <View style={styles.rowRight}>
+        {hasDetails && (
+          <View style={styles.detailsBadge}>
+            <Text style={styles.detailsBadgeText}>
+              {(food.images?.length ?? 0) > 0 ? '📷 ' : ''}
+              {food.recipe?.trim() ? '📝 ' : ''}
+              {food.notes?.trim() ? '💭' : ''}
+            </Text>
+          </View>
+        )}
+        <Text style={styles.chevron}>‹</Text>
+      </View>
     </Pressable>
   );
 }
@@ -257,18 +261,41 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    gap: spacing.sm,
   },
   foodName: {
+    flex: 1,
     fontSize: fontSize.md,
     fontFamily: fontFamily.medium,
     color: colors.text,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  rowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailsBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: '#FBEFD9',
+  },
+  detailsBadgeText: {
+    fontSize: fontSize.xs,
+  },
+  chevron: {
+    fontSize: fontSize.xl,
+    color: colors.textMuted,
+    fontFamily: fontFamily.regular,
   },
 });

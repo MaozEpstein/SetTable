@@ -1,6 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CreateGroupScreen } from '../screens/CreateGroupScreen';
+import { FoodDetailScreen } from '../screens/FoodDetailScreen';
 import { GroupScreen } from '../screens/GroupScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { JoinGroupScreen } from '../screens/JoinGroupScreen';
@@ -24,6 +25,7 @@ export function RootNavigator() {
         <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
         <Stack.Screen name="JoinGroup" component={JoinGroupScreen} />
         <Stack.Screen name="Group" component={GroupScreen} />
+        <Stack.Screen name="FoodDetail" component={FoodDetailScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>

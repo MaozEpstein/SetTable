@@ -22,9 +22,16 @@ type Props = {
   groupId: string;
   categories: CategoryInfo[];
   onClose: () => void;
+  onCreated?: (foodId: string) => void;
 };
 
-export function AddFoodModal({ visible, groupId, categories, onClose }: Props) {
+export function AddFoodModal({
+  visible,
+  groupId,
+  categories,
+  onClose,
+  onCreated,
+}: Props) {
   const { uid } = useUser();
   const [name, setName] = useState('');
   const [selected, setSelected] = useState<Set<FoodCategory>>(new Set());
@@ -58,7 +65,7 @@ export function AddFoodModal({ visible, groupId, categories, onClose }: Props) {
     if (!canSubmit) return;
     setSaving(true);
     try {
-      await createFood({
+      const newId = await createFood({
         groupId,
         name: trimmed,
         categories: Array.from(selected),
@@ -66,6 +73,7 @@ export function AddFoodModal({ visible, groupId, categories, onClose }: Props) {
       });
       reset();
       onClose();
+      onCreated?.(newId);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
       Alert.alert('אופס', `לא הצלחנו להוסיף את המאכל.\n${message}`);

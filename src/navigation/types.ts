@@ -5,6 +5,7 @@ export type RootStackParamList = {
   CreateGroup: undefined;
   JoinGroup: undefined;
   Group: { groupId: string };
+  FoodDetail: { groupId: string; foodId: string };
   Settings: undefined;
 };
 

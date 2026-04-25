@@ -47,8 +47,12 @@ export type Food = {
   name: string;
   categories: FoodCategory[];
   category?: FoodCategory; // legacy single field, kept for read-back compat
+  recipe?: string;
+  notes?: string;
+  images?: string[]; // Firebase Storage download URLs
   createdBy: string;
   createdAt: number;
+  updatedAt?: number;
 };
 
 export type Assignment = {
