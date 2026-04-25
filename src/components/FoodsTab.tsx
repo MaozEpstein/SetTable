@@ -54,6 +54,11 @@ export function FoodsTab({ group }: Props) {
     return counts;
   }, [grouped, categories]);
 
+  const favorites = useMemo(
+    () => sortFoods(foods.filter((f) => f.isFavorite)),
+    [foods],
+  );
+
   const handleOpenFood = (food: Food) => {
     navigation.navigate('FoodDetail', { groupId, foodId: food.id });
   };
@@ -116,6 +121,7 @@ export function FoodsTab({ group }: Props) {
         onChange={setActiveTab}
         countsByCategory={countsByCategory}
         totalCount={foods.length}
+        favoritesCount={favorites.length}
         onAddCategory={() => setCategoryModalVisible(true)}
         onLongPressCategory={handleLongPressCategory}
       />
@@ -129,6 +135,31 @@ export function FoodsTab({ group }: Props) {
             (למשל "חמין", "סלט ירקות", "קוגל")
           </Text>
         </View>
+      ) : activeTab === 'favorites' ? (
+        favorites.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyEmoji}>⭐</Text>
+            <Text style={styles.emptyTitle}>אין עדיין מועדפים</Text>
+            <Text style={styles.emptyText}>
+              פתחו מאכל → ✏️ ערוך → סמנו כמועדף.{'\n'}
+              המועדפים יופיעו כאן ובראש כל רשימה.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              ⭐ מועדפים
+              <Text style={styles.count}> · {favorites.length}</Text>
+            </Text>
+            {favorites.map((food) => (
+              <FoodRow
+                key={food.id}
+                food={food}
+                onPress={() => handleOpenFood(food)}
+              />
+            ))}
+          </View>
+        )
       ) : (
         sectionsToShow.map((cat) => {
           const items = grouped.get(cat.key) ?? [];

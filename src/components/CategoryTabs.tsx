@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { CategoryInfo } from '../types';
 
-export type CategorySubTab = 'all' | string;
+export type CategorySubTab = 'all' | 'favorites' | string;
 
 type Props = {
   categories: CategoryInfo[];
@@ -10,6 +10,7 @@ type Props = {
   onChange: (key: CategorySubTab) => void;
   countsByCategory?: Record<string, number>;
   totalCount?: number;
+  favoritesCount?: number;
   onAddCategory?: () => void;
   onLongPressCategory?: (category: CategoryInfo) => void;
 };
@@ -20,6 +21,7 @@ export function CategoryTabs({
   onChange,
   countsByCategory,
   totalCount,
+  favoritesCount,
   onAddCategory,
   onLongPressCategory,
 }: Props) {
@@ -36,6 +38,13 @@ export function CategoryTabs({
           emoji="📚"
           label="הכל"
           count={totalCount ?? 0}
+        />
+        <Pill
+          isActive={active === 'favorites'}
+          onPress={() => onChange('favorites')}
+          emoji="⭐"
+          label="מועדפים"
+          count={favoritesCount ?? 0}
         />
         {categories.map((cat) => (
           <Pill

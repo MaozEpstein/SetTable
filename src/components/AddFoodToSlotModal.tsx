@@ -81,8 +81,13 @@ export function AddFoodToSlotModal({
     return counts;
   }, [grouped, categories]);
 
+  const favorites = useMemo(
+    () => sortFoods(foods.filter((f) => f.isFavorite)),
+    [foods],
+  );
+
   const sectionsToShow =
-    activeCategory === 'all'
+    activeCategory === 'all' || activeCategory === 'favorites'
       ? categories
       : categories.filter((c) => c.key === activeCategory);
 
@@ -176,6 +181,7 @@ export function AddFoodToSlotModal({
               onChange={setActiveCategory}
               countsByCategory={countsByCategory}
               totalCount={foods.length}
+              favoritesCount={favorites.length}
             />
           </View>
 
@@ -224,6 +230,59 @@ export function AddFoodToSlotModal({
                   עבור לטאב "מאכלים" והוסף מאכלים, ואז חזור לכאן לשבץ אותם
                 </Text>
               </View>
+            ) : activeCategory === 'favorites' ? (
+              favorites.length === 0 ? (
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyEmoji}>⭐</Text>
+                  <Text style={styles.emptyTitle}>אין עדיין מועדפים</Text>
+                  <Text style={styles.emptyText}>
+                    סמן מאכלים ככוכב בעריכה שלהם והם יופיעו כאן
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>⭐ מועדפים</Text>
+                  {favorites.map((food) => {
+                    const used = usedFoodIds.has(food.id);
+                    const selected = selectedIds.has(food.id);
+                    return (
+                      <Pressable
+                        key={`fav-${food.id}`}
+                        onPress={() => toggleFood(food)}
+                        disabled={used}
+                        style={({ pressed }) => [
+                          styles.foodRow,
+                          selected && styles.foodRowSelected,
+                          used && styles.foodRowUsed,
+                          { opacity: pressed && !used ? 0.7 : 1 },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.checkbox,
+                            selected && styles.checkboxSelected,
+                            used && styles.checkboxUsed,
+                          ]}
+                        >
+                          {(selected || used) && (
+                            <Text style={styles.checkboxMark}>✓</Text>
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.foodName,
+                            used && styles.foodNameUsed,
+                            selected && styles.foodNameSelected,
+                          ]}
+                        >
+                          ⭐ {food.name}
+                        </Text>
+                        {used && <Text style={styles.usedTag}>כבר בסעודה</Text>}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )
             ) : (
               sectionsToShow.map((cat) => {
                 const items = grouped.get(cat.key) ?? [];

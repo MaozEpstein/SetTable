@@ -70,8 +70,13 @@ export function ReplacePlaceholderModal({
     return counts;
   }, [grouped, categories]);
 
+  const favorites = useMemo(
+    () => sortFoods(foods.filter((f) => f.isFavorite)),
+    [foods],
+  );
+
   const sectionsToShow =
-    activeCategory === 'all'
+    activeCategory === 'all' || activeCategory === 'favorites'
       ? categories
       : categories.filter((c) => c.key === activeCategory);
 
@@ -111,6 +116,7 @@ export function ReplacePlaceholderModal({
               onChange={setActiveCategory}
               countsByCategory={countsByCategory}
               totalCount={foods.length}
+              favoritesCount={favorites.length}
             />
           </View>
 
@@ -129,6 +135,38 @@ export function ReplacePlaceholderModal({
                   עבור לטאב "מאכלים" והוסף מאכלים, ואז חזור לכאן
                 </Text>
               </View>
+            ) : activeCategory === 'favorites' ? (
+              favorites.length === 0 ? (
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyEmoji}>⭐</Text>
+                  <Text style={styles.emptyTitle}>אין עדיין מועדפים</Text>
+                </View>
+              ) : (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>⭐ מועדפים</Text>
+                  {favorites.map((food) => {
+                    const isSaving = savingId === food.id;
+                    return (
+                      <Pressable
+                        key={`fav-${food.id}`}
+                        onPress={() => handlePick(food)}
+                        disabled={!!savingId}
+                        style={({ pressed }) => [
+                          styles.foodRow,
+                          { opacity: pressed ? 0.7 : 1 },
+                        ]}
+                      >
+                        <Text style={styles.foodName}>⭐ {food.name}</Text>
+                        {isSaving ? (
+                          <Text style={styles.savingTag}>מחליף...</Text>
+                        ) : (
+                          <Text style={styles.chevron}>›</Text>
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )
             ) : (
               sectionsToShow.map((cat) => {
                 const items = grouped.get(cat.key) ?? [];
