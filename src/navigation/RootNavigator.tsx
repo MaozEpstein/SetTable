@@ -4,6 +4,7 @@ import { CreateGroupScreen } from '../screens/CreateGroupScreen';
 import { GroupScreen } from '../screens/GroupScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { JoinGroupScreen } from '../screens/JoinGroupScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { colors } from '../theme';
 import type { RootStackParamList } from './types';
 
@@ -23,6 +24,7 @@ export function RootNavigator() {
         <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
         <Stack.Screen name="JoinGroup" component={JoinGroupScreen} />
         <Stack.Screen name="Group" component={GroupScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

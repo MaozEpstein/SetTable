@@ -13,7 +13,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { FirebaseSetupScreen } from './src/screens/FirebaseSetupScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { ensureAnonymousAuth } from './src/services/auth';
-import { getUserName } from './src/storage';
+import { clearUserName, getUserName, setUserName as persistUserName } from './src/storage';
 import { colors } from './src/theme';
 
 if (!I18nManager.isRTL) {
@@ -98,9 +98,24 @@ export default function App() {
     );
   }
 
+  const handleSetUserName = (name: string) => {
+    persistUserName(name).catch(() => {});
+    setUserName(name);
+  };
+
+  const handleSignOut = () => {
+    clearUserName().catch(() => {});
+    setUserName(null);
+  };
+
   return (
     <SafeAreaProvider>
-      <UserProvider uid={uid} userName={userName}>
+      <UserProvider
+        uid={uid}
+        userName={userName}
+        setUserName={handleSetUserName}
+        signOut={handleSignOut}
+      >
         <RootNavigator />
       </UserProvider>
     </SafeAreaProvider>

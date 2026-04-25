@@ -20,7 +20,16 @@ export function HomeScreen({ navigation }: RootStackScreenProps<'Home'>) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.logo}>🕯️ שולחן ערוך</Text>
+          <View style={styles.headerTop}>
+            <Pressable
+              onPress={() => navigation.navigate('Settings')}
+              hitSlop={12}
+              style={({ pressed }) => [styles.settingsButton, { opacity: pressed ? 0.5 : 1 }]}
+            >
+              <Text style={styles.settingsIcon}>⚙️</Text>
+            </Pressable>
+            <Text style={styles.logo}>🕯️ שולחן ערוך</Text>
+          </View>
           <Text style={styles.greeting}>שלום, {userName} 👋</Text>
         </View>
 
@@ -116,6 +125,18 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'flex-end',
     gap: spacing.xs,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+  },
+  settingsButton: {
+    padding: spacing.xs,
+  },
+  settingsIcon: {
+    fontSize: fontSize.xl,
   },
   logo: {
     fontSize: fontSize.xl,

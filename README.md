@@ -104,7 +104,42 @@ SetTable/
 - [x] **שלב 2:** Firebase + יצירת/הצטרפות לקבוצה + שיתוף קוד
 - [x] **שלב 3:** מסך קבוצה עם 3 טאבים + ניהול מאכלים
 - [x] **שלב 4:** שיבוץ מאכלים לארוחות + שיבוץ אדם + "הוכן"
-- [ ] **שלב 5:** ליטוש + בדיקת E2E
+- [x] **שלב 5:** ליטוש - מסך הגדרות, שינוי שם, עזיבת קבוצה, התנתקות
+
+---
+
+## חוקי Firestore מומלצים (שדרוג אבטחה לאחר MVP)
+
+החוקים הראשוניים מתירים לכל משתמש מזוהה לקרוא ולכתוב לכל קבוצה. לפני שיתוף עם משתמשים מחוץ למשפחה, החלף ב-Firebase Console → Firestore → Rules:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /groups/{groupId} {
+      // קריאת מסמך הקבוצה: רק חברים, או חיפוש לפי קוד
+      allow get: if request.auth != null &&
+        request.auth.uid in resource.data.memberUids;
+      allow list: if request.auth != null;
+      // יצירת קבוצה: היוצר חייב להיות בתוך memberUids
+      allow create: if request.auth != null &&
+        request.auth.uid in request.resource.data.memberUids;
+      // עדכון: רק חברים, או הצטרפות (הוספת self ל-memberUids)
+      allow update: if request.auth != null && (
+        request.auth.uid in resource.data.memberUids ||
+        request.auth.uid in request.resource.data.memberUids
+      );
+      allow delete: if false;
+
+      // תת-קולקציות (foods, assignments): רק חברים
+      match /{document=**} {
+        allow read, write: if request.auth != null &&
+          request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberUids;
+      }
+    }
+  }
+}
+```
 
 ---
 

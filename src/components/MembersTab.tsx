@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
+import { leaveGroup } from '../services/groups';
+import { removeGroupId } from '../storage';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { Group } from '../types';
 
@@ -12,6 +16,8 @@ type Props = {
 
 export function MembersTab({ group }: Props) {
   const { uid } = useUser();
+  const navigation = useNavigation();
+  const [leaving, setLeaving] = useState(false);
   const members = Object.values(group.members ?? {}).sort(
     (a, b) => a.joinedAt - b.joinedAt,
   );
@@ -19,6 +25,31 @@ export function MembersTab({ group }: Props) {
   const handleCopyCode = async () => {
     await Clipboard.setStringAsync(group.code);
     Alert.alert('הועתק ✓', `הקוד ${group.code} הועתק ללוח.`);
+  };
+
+  const handleLeave = () => {
+    Alert.alert(
+      `עזיבת "${group.name}"`,
+      'תוסר מרשימת חברי הקבוצה ולא תראה יותר את המאכלים והשיבוצים שלה. תוכל להצטרף שוב בעתיד עם הקוד.',
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'עזוב קבוצה',
+          style: 'destructive',
+          onPress: async () => {
+            setLeaving(true);
+            try {
+              await leaveGroup(group.id, uid);
+              await removeGroupId(group.id);
+              navigation.goBack();
+            } catch {
+              Alert.alert('אופס', 'לא הצלחנו לעזוב את הקבוצה. נסה שוב.');
+              setLeaving(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleShareCode = async () => {
@@ -74,6 +105,15 @@ export function MembersTab({ group }: Props) {
             {m.uid === uid && <Text style={styles.youTag}>אני</Text>}
           </View>
         ))}
+      </View>
+
+      <View style={styles.dangerSection}>
+        <PrimaryButton
+          label="עזוב קבוצה"
+          variant="outline"
+          onPress={handleLeave}
+          loading={leaving}
+        />
       </View>
     </View>
   );
@@ -171,5 +211,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.pill,
+  },
+  dangerSection: {
+    marginTop: spacing.md,
   },
 });

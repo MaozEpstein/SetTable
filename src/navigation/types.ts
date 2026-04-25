@@ -5,6 +5,7 @@ export type RootStackParamList = {
   CreateGroup: undefined;
   JoinGroup: undefined;
   Group: { groupId: string };
+  Settings: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =

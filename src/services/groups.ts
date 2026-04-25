@@ -1,7 +1,9 @@
 import {
   addDoc,
+  arrayRemove,
   arrayUnion,
   collection,
+  deleteField,
   doc,
   getDocs,
   limit,
@@ -10,6 +12,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -115,6 +118,30 @@ export async function joinGroupByCode({
   });
 
   return { ok: true, id: docSnap.id, name: data.name };
+}
+
+export async function leaveGroup(groupId: string, uid: string): Promise<void> {
+  await updateDoc(doc(db, GROUPS, groupId), {
+    [`members.${uid}`]: deleteField(),
+    memberUids: arrayRemove(uid),
+  });
+}
+
+export async function updateNameInAllGroups(
+  uid: string,
+  newName: string,
+): Promise<void> {
+  const trimmed = newName.trim();
+  if (!trimmed) return;
+  const snap = await getDocs(
+    query(collection(db, GROUPS), where('memberUids', 'array-contains', uid)),
+  );
+  if (snap.empty) return;
+  const batch = writeBatch(db);
+  snap.forEach((d) => {
+    batch.update(d.ref, { [`members.${uid}.name`]: trimmed });
+  });
+  await batch.commit();
 }
 
 export function subscribeToMyGroups(
