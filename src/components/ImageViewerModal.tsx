@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -9,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { ZoomableImage } from './ZoomableImage';
 import { colors, fontFamily, fontSize, spacing } from '../theme';
 
 type Props = {
@@ -20,6 +20,7 @@ type Props = {
 
 export function ImageViewerModal({ visible, images, initialIndex, onClose }: Props) {
   const [index, setIndex] = useState(initialIndex);
+  const [pageZoomed, setPageZoomed] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const { width, height } = Dimensions.get('window');
 
@@ -28,8 +29,7 @@ export function ImageViewerModal({ visible, images, initialIndex, onClose }: Pro
   useEffect(() => {
     if (!visible) return;
     setIndex(initialIndex);
-    // Defer scroll until after layout — without this the ScrollView
-    // hasn't measured yet on the first frame after visible flips on.
+    setPageZoomed(false);
     const handle = requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({
         x: initialIndex * width,
@@ -53,27 +53,28 @@ export function ImageViewerModal({ visible, images, initialIndex, onClose }: Pro
           ref={scrollRef}
           horizontal
           pagingEnabled
+          // When the current image is zoomed in, lock horizontal swiping
+          // so panning the zoomed image doesn't switch pages.
+          scrollEnabled={!pageZoomed}
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={(e) => {
             const i = Math.round(e.nativeEvent.contentOffset.x / width);
             setIndex(i);
+            // New page starts at zoom 1
+            setPageZoomed(false);
           }}
         >
           {images.map((uri, i) => (
-            <ScrollView
-              key={i}
-              style={{ width, height }}
-              contentContainerStyle={[styles.page, { width, height }]}
-              maximumZoomScale={4}
-              minimumZoomScale={1}
-              bouncesZoom
-              pinchGestureEnabled
-              centerContent
-              showsHorizontalScrollIndicator={false}
-              showsVerticalScrollIndicator={false}
-            >
-              <Image source={{ uri }} style={styles.image} resizeMode="contain" />
-            </ScrollView>
+            <View key={i} style={[styles.page, { width, height }]}>
+              <ZoomableImage
+                uri={uri}
+                style={{ width, height }}
+                onZoomStateChange={(zoomed) => {
+                  // Only the active page should affect the pager lock
+                  if (i === index) setPageZoomed(zoomed);
+                }}
+              />
+            </View>
           ))}
         </ScrollView>
 
@@ -97,10 +98,6 @@ const styles = StyleSheet.create({
   page: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
   },
   closeButton: {
     position: 'absolute',

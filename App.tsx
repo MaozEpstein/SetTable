@@ -1,5 +1,7 @@
+import 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, I18nManager, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   Heebo_400Regular,
@@ -60,47 +62,57 @@ export default function App() {
 
   if (!fontsLoaded || !nameChecked) {
     return (
-      <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.flex}>
+        <SafeAreaProvider>
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
-      </SafeAreaProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     );
   }
 
   if (!isFirebaseConfigured) {
     return (
-      <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.flex}>
+        <SafeAreaProvider>
         <FirebaseSetupScreen />
-      </SafeAreaProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     );
   }
 
   if (!userName) {
     return (
-      <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.flex}>
+        <SafeAreaProvider>
         <OnboardingScreen onComplete={(name) => setUserName(name)} />
-      </SafeAreaProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     );
   }
 
   if (authError) {
     return (
-      <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.flex}>
+        <SafeAreaProvider>
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
-      </SafeAreaProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     );
   }
 
   if (!uid) {
     return (
-      <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.flex}>
+        <SafeAreaProvider>
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
-      </SafeAreaProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     );
   }
 
@@ -129,6 +141,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   loading: {
     flex: 1,
     backgroundColor: colors.background,
