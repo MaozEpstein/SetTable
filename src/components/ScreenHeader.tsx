@@ -17,7 +17,7 @@ export function ScreenHeader({ title, onBack, right }: Props) {
             hitSlop={12}
             style={({ pressed }) => [styles.back, { opacity: pressed ? 0.5 : 1 }]}
           >
-            <Text style={styles.backLabel}>→</Text>
+            <Text style={styles.backLabel}>❯</Text>
           </Pressable>
         ) : null}
       </View>
@@ -46,12 +46,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   back: {
-    padding: spacing.xs,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backLabel: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bold,
     color: colors.text,
-    lineHeight: fontSize.xxl + 2,
+    lineHeight: fontSize.lg + 2,
+    includeFontPadding: false,
   },
   title: {
     flex: 1,
