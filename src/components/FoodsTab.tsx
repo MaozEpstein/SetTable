@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AddFoodModal } from './AddFoodModal';
 import { PrimaryButton } from './PrimaryButton';
 import { useFoods } from '../hooks/useFoods';
+import { deleteAssignmentsForFood } from '../services/assignments';
 import { deleteFood } from '../services/foods';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import { FOOD_CATEGORIES, type Food, type FoodCategory } from '../types';
@@ -35,9 +36,14 @@ export function FoodsTab({ groupId }: Props) {
         {
           text: 'מחק',
           style: 'destructive',
-          onPress: () => deleteFood(groupId, food.id).catch(() => {
-            Alert.alert('אופס', 'לא הצלחנו למחוק. נסה שוב.');
-          }),
+          onPress: async () => {
+            try {
+              await deleteAssignmentsForFood(groupId, food.id);
+              await deleteFood(groupId, food.id);
+            } catch {
+              Alert.alert('אופס', 'לא הצלחנו למחוק. נסה שוב.');
+            }
+          },
         },
       ],
     );
