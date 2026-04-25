@@ -60,9 +60,20 @@ export function ImageViewerModal({ visible, images, initialIndex, onClose }: Pro
           }}
         >
           {images.map((uri, i) => (
-            <View key={i} style={[styles.page, { width, height }]}>
+            <ScrollView
+              key={i}
+              style={{ width, height }}
+              contentContainerStyle={[styles.page, { width, height }]}
+              maximumZoomScale={4}
+              minimumZoomScale={1}
+              bouncesZoom
+              pinchGestureEnabled
+              centerContent
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+            >
               <Image source={{ uri }} style={styles.image} resizeMode="contain" />
-            </View>
+            </ScrollView>
           ))}
         </ScrollView>
 
