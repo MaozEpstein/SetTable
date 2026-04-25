@@ -57,13 +57,18 @@ export type Food = {
 
 export type Assignment = {
   id: string;
-  foodId: string;
+  foodId: string | null; // null when this is a category-only placeholder
+  placeholderCategory?: FoodCategory; // set only when foodId is null
   slot: string;
   assignedTo: string | null; // a member uid OR a manualMember id OR null
   done: boolean;
   createdBy: string;
   createdAt: number;
 };
+
+export function isPlaceholderAssignment(a: Assignment): boolean {
+  return !a.foodId;
+}
 
 export type Group = {
   id: string;

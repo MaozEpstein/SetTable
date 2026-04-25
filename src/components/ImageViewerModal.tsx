@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ZoomableImage } from './ZoomableImage';
 import { colors, fontFamily, fontSize, spacing } from '../theme';
 
@@ -44,7 +45,7 @@ export function ImageViewerModal({ visible, images, initialIndex, onClose }: Pro
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <GestureHandlerRootView style={styles.backdrop}>
         <Pressable style={styles.closeButton} onPress={onClose} hitSlop={12}>
           <Text style={styles.closeText}>✕</Text>
         </Pressable>
@@ -85,7 +86,7 @@ export function ImageViewerModal({ visible, images, initialIndex, onClose }: Pro
             </Text>
           </View>
         )}
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

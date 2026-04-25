@@ -4,6 +4,7 @@ import { AddFoodToSlotModal } from './AddFoodToSlotModal';
 import { AddMealSlotModal } from './AddMealSlotModal';
 import { AssigneePickerModal } from './AssigneePickerModal';
 import { MealSlotTabs, type MealSubTab } from './MealSlotTabs';
+import { ReplacePlaceholderModal } from './ReplacePlaceholderModal';
 import { SlotPickerModal } from './SlotPickerModal';
 import { useUser } from '../context/UserContext';
 import { useAssignments } from '../hooks/useAssignments';
@@ -17,6 +18,7 @@ import {
   getAllSlots,
   getCategoryInfo,
   getFoodCategories,
+  isPlaceholderAssignment,
   type Assignment,
   type AssigneeInfo,
   type Food,
@@ -44,6 +46,10 @@ export function MealsTab({ group }: Props) {
   } | null>(null);
   const [addSlotModalVisible, setAddSlotModalVisible] = useState(false);
   const [slotPickerVisible, setSlotPickerVisible] = useState(false);
+  const [replacingPlaceholder, setReplacingPlaceholder] = useState<{
+    id: string;
+    categoryKey: string | null;
+  } | null>(null);
 
   const slots = useMemo(() => getAllSlots(group), [group]);
   const slotByKey = useMemo(() => {
@@ -137,6 +143,17 @@ export function MealsTab({ group }: Props) {
     };
   };
 
+  const handleRowPress = (a: Assignment, foodName: string) => {
+    if (isPlaceholderAssignment(a)) {
+      setReplacingPlaceholder({
+        id: a.id,
+        categoryKey: a.placeholderCategory ?? null,
+      });
+    } else {
+      setEditingAssignment(buildEditingState(a, foodName));
+    }
+  };
+
   return (
     <View style={styles.container}>
       <MealSlotTabs
@@ -159,13 +176,12 @@ export function MealsTab({ group }: Props) {
           assigneeById={assigneeById}
           onAdd={() => setSlotPickerVisible(true)}
           onToggleDone={handleToggleDone}
-          onChangeAssignee={(a, foodName) =>
-            setEditingAssignment(buildEditingState(a, foodName))
-          }
+          onChangeAssignee={handleRowPress}
           onLongPress={handleDelete}
         />
       ) : (
         <SingleSlotView
+          group={group}
           slot={slotByKey.get(activeSubTab) ?? null}
           assignments={bySlot.get(activeSubTab) ?? []}
           foodsById={foodsById}
@@ -175,9 +191,7 @@ export function MealsTab({ group }: Props) {
             if (slot) setAddingToSlot(slot);
           }}
           onToggleDone={handleToggleDone}
-          onChangeAssignee={(a, foodName) =>
-            setEditingAssignment(buildEditingState(a, foodName))
-          }
+          onChangeAssignee={handleRowPress}
           onLongPress={handleDelete}
         />
       )}
@@ -224,6 +238,17 @@ export function MealsTab({ group }: Props) {
         }}
         onClose={() => setSlotPickerVisible(false)}
       />
+
+      {replacingPlaceholder && (
+        <ReplacePlaceholderModal
+          visible={replacingPlaceholder !== null}
+          groupId={groupId}
+          assignmentId={replacingPlaceholder.id}
+          defaultCategoryKey={replacingPlaceholder.categoryKey}
+          categories={categories}
+          onClose={() => setReplacingPlaceholder(null)}
+        />
+      )}
     </View>
   );
 }
@@ -269,8 +294,16 @@ function AllAssignmentsView({
         </View>
       ) : (
         assignments.map((a) => {
-          const food = foodsById.get(a.foodId);
-          const foodName = food?.name ?? '(מאכל נמחק)';
+          const isPlaceholder = isPlaceholderAssignment(a);
+          const food = a.foodId ? foodsById.get(a.foodId) : undefined;
+          const placeholderCat = a.placeholderCategory
+            ? getCategoryInfo(group, a.placeholderCategory)
+            : null;
+          const foodName = isPlaceholder
+            ? placeholderCat
+              ? `${placeholderCat.emoji} ${placeholderCat.label}`
+              : 'קטגוריה לא ידועה'
+            : (food?.name ?? '(מאכל נמחק)');
           const slotInfo = slotByKey.get(a.slot);
           const categoryLabels = food
             ? getFoodCategories(food)
@@ -283,6 +316,7 @@ function AllAssignmentsView({
             <FlatAssignmentRow
               key={a.id}
               assignment={a}
+              isPlaceholder={isPlaceholder}
               foodName={foodName}
               categoryLabels={categoryLabels}
               slotLabel={
@@ -309,6 +343,7 @@ function AllAssignmentsView({
 }
 
 type SingleViewProps = {
+  group: Group;
   slot: SlotInfo | null;
   assignments: Assignment[];
   foodsById: Map<string, Food>;
@@ -320,6 +355,7 @@ type SingleViewProps = {
 };
 
 function SingleSlotView({
+  group,
   slot,
   assignments,
   foodsById,
@@ -347,13 +383,22 @@ function SingleSlotView({
         <Text style={styles.emptyText}>אין עדיין מאכלים ששובצו</Text>
       ) : (
         assignments.map((a) => {
-          const food = foodsById.get(a.foodId);
+          const isPlaceholder = isPlaceholderAssignment(a);
+          const food = a.foodId ? foodsById.get(a.foodId) : undefined;
+          const placeholderCat = a.placeholderCategory
+            ? getCategoryInfo(group, a.placeholderCategory)
+            : null;
           const assignee = a.assignedTo ? assigneeById.get(a.assignedTo) : null;
-          const foodName = food?.name ?? '(מאכל נמחק)';
+          const foodName = isPlaceholder
+            ? placeholderCat
+              ? `${placeholderCat.emoji} ${placeholderCat.label}`
+              : 'קטגוריה לא ידועה'
+            : (food?.name ?? '(מאכל נמחק)');
           return (
             <AssignmentRow
               key={a.id}
               assignment={a}
+              isPlaceholder={isPlaceholder}
               foodName={foodName}
               assigneeName={assignee?.name ?? null}
               onToggleDone={() => onToggleDone(a)}
@@ -378,6 +423,7 @@ function SingleSlotView({
 type AssignmentRowProps = {
   assignment: Assignment;
   foodName: string;
+  isPlaceholder: boolean;
   assigneeName: string | null;
   onToggleDone: () => void;
   onChangeAssignee: () => void;
@@ -387,6 +433,7 @@ type AssignmentRowProps = {
 function AssignmentRow({
   assignment,
   foodName,
+  isPlaceholder,
   assigneeName,
   onToggleDone,
   onChangeAssignee,
@@ -397,6 +444,7 @@ function AssignmentRow({
     <View
       style={[
         styles.row,
+        isPlaceholder && styles.rowPlaceholder,
         isAssignedNotDone && styles.rowAssigned,
         assignment.done && styles.rowDone,
       ]}
@@ -418,6 +466,9 @@ function AssignmentRow({
       >
         <Text style={[styles.foodName, assignment.done && styles.foodNameDone]}>
           {foodName}
+          {isPlaceholder && (
+            <Text style={styles.placeholderHint}> · טרם נבחר</Text>
+          )}
         </Text>
         <View style={styles.assigneeWrap}>
           <Text
@@ -435,6 +486,7 @@ function AssignmentRow({
 type FlatRowProps = {
   assignment: Assignment;
   foodName: string;
+  isPlaceholder: boolean;
   categoryLabels: string[];
   slotLabel: string;
   assigneeName: string | null;
@@ -446,6 +498,7 @@ type FlatRowProps = {
 function FlatAssignmentRow({
   assignment,
   foodName,
+  isPlaceholder,
   categoryLabels,
   slotLabel,
   assigneeName,
@@ -458,6 +511,7 @@ function FlatAssignmentRow({
     <View
       style={[
         styles.row,
+        isPlaceholder && styles.rowPlaceholder,
         isAssignedNotDone && styles.rowAssigned,
         assignment.done && styles.rowDone,
       ]}
@@ -479,6 +533,9 @@ function FlatAssignmentRow({
       >
         <Text style={[styles.foodName, assignment.done && styles.foodNameDone]}>
           {foodName}
+          {isPlaceholder && (
+            <Text style={styles.placeholderHint}> · טרם נבחר</Text>
+          )}
         </Text>
         <View style={styles.tagsRow}>
           {categoryLabels.map((label) => (
@@ -575,6 +632,16 @@ const styles = StyleSheet.create({
   rowAssigned: {
     backgroundColor: '#FBEDE3',
     borderColor: colors.warning,
+  },
+  rowPlaceholder: {
+    borderStyle: 'dashed',
+    borderColor: colors.warning,
+  },
+  placeholderHint: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
+    color: colors.warning,
+    fontStyle: 'italic',
   },
   rowDone: {
     backgroundColor: '#F1F5EC',

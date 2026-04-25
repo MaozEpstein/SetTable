@@ -13,7 +13,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Assignment } from '../types';
+import type { Assignment, FoodCategory } from '../types';
 
 function assignmentsCol(groupId: string) {
   return collection(db, 'groups', groupId, 'assignments');
@@ -41,6 +41,43 @@ export async function createAssignment({
     createdAt: Date.now(),
   });
   return ref.id;
+}
+
+type CreatePlaceholderInput = {
+  groupId: string;
+  slot: string;
+  category: FoodCategory;
+  uid: string;
+};
+
+export async function createPlaceholderAssignment({
+  groupId,
+  slot,
+  category,
+  uid,
+}: CreatePlaceholderInput): Promise<string> {
+  const ref = await addDoc(assignmentsCol(groupId), {
+    foodId: null,
+    placeholderCategory: category,
+    slot,
+    assignedTo: null,
+    done: false,
+    createdBy: uid,
+    createdAt: Date.now(),
+  });
+  return ref.id;
+}
+
+export async function resolvePlaceholder(
+  groupId: string,
+  assignmentId: string,
+  foodId: string,
+): Promise<void> {
+  const ref = doc(db, 'groups', groupId, 'assignments', assignmentId);
+  await updateDoc(ref, {
+    foodId,
+    placeholderCategory: null,
+  });
 }
 
 export async function setAssignee(

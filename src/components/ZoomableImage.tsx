@@ -1,15 +1,22 @@
-import { Image, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { useRef, useState } from 'react';
+import {
+  Animated,
+  Image,
+  StyleSheet,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import {
+  PanGestureHandler,
+  PinchGestureHandler,
+  State,
+  type PanGestureHandlerStateChangeEvent,
+  type PinchGestureHandlerStateChangeEvent,
+} from 'react-native-gesture-handler';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
-const DOUBLE_TAP_SCALE = 2.5;
+const ZOOM_THRESHOLD = 1.01;
 
 type Props = {
   uri: string;
@@ -17,87 +24,129 @@ type Props = {
   onZoomStateChange?: (zoomed: boolean) => void;
 };
 
+// Built on the legacy PinchGestureHandler / PanGestureHandler APIs from
+// react-native-gesture-handler 2.x. We avoid the new Gesture API because
+// it requires react-native-reanimated, which has native-binding problems
+// in Expo Go SDK 54 today. The old API works with React Native's built-in
+// Animated and runs on the UI thread via useNativeDriver.
 export function ZoomableImage({ uri, style, onZoomStateChange }: Props) {
-  const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
+  // Animated.multiply / Animated.add lets us combine "committed" base values
+  // with the live gesture value without manually doing math each frame.
+  const baseScale = useRef(new Animated.Value(1)).current;
+  const pinchScale = useRef(new Animated.Value(1)).current;
+  const scale = Animated.multiply(baseScale, pinchScale);
 
-  const notifyZoom = (zoomed: boolean) => {
-    onZoomStateChange?.(zoomed);
+  const baseX = useRef(new Animated.Value(0)).current;
+  const panX = useRef(new Animated.Value(0)).current;
+  const translateX = Animated.add(baseX, panX);
+
+  const baseY = useRef(new Animated.Value(0)).current;
+  const panY = useRef(new Animated.Value(0)).current;
+  const translateY = Animated.add(baseY, panY);
+
+  const lastScale = useRef(1);
+  const lastX = useRef(0);
+  const lastY = useRef(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  const setZoomed = (zoomed: boolean) => {
+    if (zoomed !== isZoomed) {
+      setIsZoomed(zoomed);
+      onZoomStateChange?.(zoomed);
+    }
   };
 
   const reset = () => {
-    'worklet';
-    scale.value = withTiming(1);
-    savedScale.value = 1;
-    translateX.value = withTiming(0);
-    translateY.value = withTiming(0);
-    savedTranslateX.value = 0;
-    savedTranslateY.value = 0;
-    runOnJS(notifyZoom)(false);
+    Animated.parallel([
+      Animated.spring(baseScale, { toValue: 1, useNativeDriver: true }),
+      Animated.spring(baseX, { toValue: 0, useNativeDriver: true }),
+      Animated.spring(baseY, { toValue: 0, useNativeDriver: true }),
+    ]).start();
+    pinchScale.setValue(1);
+    panX.setValue(0);
+    panY.setValue(0);
+    lastScale.current = 1;
+    lastX.current = 0;
+    lastY.current = 0;
+    setZoomed(false);
   };
 
-  const pinch = Gesture.Pinch()
-    .onUpdate((e) => {
-      const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, savedScale.value * e.scale));
-      scale.value = next;
-    })
-    .onEnd(() => {
-      savedScale.value = scale.value;
-      if (scale.value <= MIN_SCALE + 0.01) {
+  const onPinchGestureEvent = Animated.event(
+    [{ nativeEvent: { scale: pinchScale } }],
+    { useNativeDriver: true },
+  );
+
+  const onPinchHandlerStateChange = (event: PinchGestureHandlerStateChangeEvent) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      let next = lastScale.current * event.nativeEvent.scale;
+      next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, next));
+
+      if (next <= ZOOM_THRESHOLD) {
         reset();
-      } else {
-        runOnJS(notifyZoom)(true);
+        return;
       }
-    });
 
-  const pan = Gesture.Pan()
-    .minPointers(1)
-    .maxPointers(2)
-    .onUpdate((e) => {
-      // Only allow panning when zoomed in
-      if (savedScale.value <= MIN_SCALE + 0.01) return;
-      translateX.value = savedTranslateX.value + e.translationX;
-      translateY.value = savedTranslateY.value + e.translationY;
-    })
-    .onEnd(() => {
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-    });
+      lastScale.current = next;
+      baseScale.setValue(next);
+      pinchScale.setValue(1);
+      setZoomed(true);
+    }
+  };
 
-  const doubleTap = Gesture.Tap()
-    .numberOfTaps(2)
-    .onEnd(() => {
-      if (scale.value > MIN_SCALE + 0.01) {
-        reset();
-      } else {
-        scale.value = withTiming(DOUBLE_TAP_SCALE);
-        savedScale.value = DOUBLE_TAP_SCALE;
-        runOnJS(notifyZoom)(true);
+  const onPanGestureEvent = Animated.event(
+    [{ nativeEvent: { translationX: panX, translationY: panY } }],
+    { useNativeDriver: true },
+  );
+
+  const onPanHandlerStateChange = (event: PanGestureHandlerStateChangeEvent) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      // Only commit pan when zoomed in
+      if (lastScale.current <= ZOOM_THRESHOLD) {
+        panX.setValue(0);
+        panY.setValue(0);
+        return;
       }
-    });
-
-  const composed = Gesture.Simultaneous(pinch, pan, doubleTap);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
+      lastX.current += event.nativeEvent.translationX;
+      lastY.current += event.nativeEvent.translationY;
+      baseX.setValue(lastX.current);
+      baseY.setValue(lastY.current);
+      panX.setValue(0);
+      panY.setValue(0);
+    }
+  };
 
   return (
-    <GestureDetector gesture={composed}>
+    <PanGestureHandler
+      onGestureEvent={onPanGestureEvent}
+      onHandlerStateChange={onPanHandlerStateChange}
+      enabled={isZoomed}
+      minPointers={1}
+      maxPointers={2}
+    >
       <Animated.View style={[styles.container, style]}>
-        <Animated.View style={[styles.fill, animatedStyle]}>
-          <Image source={{ uri }} style={styles.image} resizeMode="contain" />
-        </Animated.View>
+        <PinchGestureHandler
+          onGestureEvent={onPinchGestureEvent}
+          onHandlerStateChange={onPinchHandlerStateChange}
+        >
+          <Animated.View style={styles.fill}>
+            <Animated.View
+              style={[
+                styles.fill,
+                {
+                  transform: [
+                    { translateX },
+                    { translateY },
+                    { scale },
+                  ],
+                },
+              ]}
+            >
+              <Image source={{ uri }} style={styles.image} resizeMode="contain" />
+            </Animated.View>
+          </Animated.View>
+        </PinchGestureHandler>
       </Animated.View>
-    </GestureDetector>
+    </PanGestureHandler>
   );
 }
 

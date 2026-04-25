@@ -12,9 +12,18 @@ import { CategoryTabs, type CategorySubTab } from './CategoryTabs';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
 import { useFoods } from '../hooks/useFoods';
-import { createAssignment } from '../services/assignments';
+import {
+  createAssignment,
+  createPlaceholderAssignment,
+} from '../services/assignments';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import { getFoodCategories, type Assignment, type CategoryInfo, type Food } from '../types';
+import {
+  getFoodCategories,
+  type Assignment,
+  type CategoryInfo,
+  type Food,
+  type FoodCategory,
+} from '../types';
 
 type Props = {
   visible: boolean;
@@ -42,6 +51,7 @@ export function AddFoodToSlotModal({
   const [activeCategory, setActiveCategory] = useState<CategorySubTab>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [addingPlaceholderKey, setAddingPlaceholderKey] = useState<string | null>(null);
 
   const usedFoodIds = useMemo(
     () => new Set(existingAssignments.map((a) => a.foodId)),
@@ -89,6 +99,27 @@ export function AddFoodToSlotModal({
       else next.add(food.id);
       return next;
     });
+  };
+
+  const handleAddPlaceholder = async (cat: CategoryInfo) => {
+    if (saving || addingPlaceholderKey) return;
+    setAddingPlaceholderKey(cat.key);
+    try {
+      await createPlaceholderAssignment({
+        groupId,
+        slot,
+        category: cat.key as FoodCategory,
+        uid,
+      });
+      setSelectedIds(new Set());
+      setActiveCategory('all');
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
+      Alert.alert('אופס', `לא הצלחנו להוסיף שיריון.\n${message}`);
+    } finally {
+      setAddingPlaceholderKey(null);
+    }
   };
 
   const handleSave = async () => {
@@ -151,6 +182,36 @@ export function AddFoodToSlotModal({
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           >
+            <View style={styles.placeholderSection}>
+              <Text style={styles.placeholderTitle}>
+                💡 שריון לפי קטגוריה (מבלי לבחור מאכל ספציפי)
+              </Text>
+              <Text style={styles.placeholderHelper}>
+                למשל "פחמימה" — חבר אחר יוכל אחר כך לבחור מה בדיוק להכין
+              </Text>
+              <View style={styles.placeholderChips}>
+                {categories.map((cat) => {
+                  const isLoading = addingPlaceholderKey === cat.key;
+                  return (
+                    <Pressable
+                      key={`ph-${cat.key}`}
+                      onPress={() => handleAddPlaceholder(cat)}
+                      disabled={!!addingPlaceholderKey || saving}
+                      style={({ pressed }) => [
+                        styles.placeholderChip,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Text style={styles.placeholderChipEmoji}>{cat.emoji}</Text>
+                      <Text style={styles.placeholderChipLabel}>
+                        {isLoading ? '...' : cat.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
             {loading ? (
               <Text style={styles.empty}>טוען...</Text>
             ) : foods.length === 0 ? (
@@ -389,4 +450,54 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   footerHalf: { flex: 1 },
+  placeholderSection: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  placeholderTitle: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bold,
+    color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  placeholderHelper: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginBottom: spacing.xs,
+  },
+  placeholderChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  placeholderChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    backgroundColor: '#FBE6DC',
+    gap: 4,
+  },
+  placeholderChipEmoji: {
+    fontSize: fontSize.sm,
+  },
+  placeholderChipLabel: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.medium,
+    color: colors.warning,
+    writingDirection: 'rtl',
+  },
 });
