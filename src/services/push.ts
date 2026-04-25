@@ -1,18 +1,14 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Push notifications were removed from Expo Go in SDK 53 (both platforms).
+// Importing expo-notifications has module-load side effects that print a
+// red Console Error in Expo Go. So we gate ALL expo-notifications imports
+// behind this flag and load them dynamically when (and only when) we're
+// running in a real build.
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 const TOKENS = 'pushTokens';
 
@@ -23,24 +19,42 @@ function getProjectId(): string | undefined {
   );
 }
 
-async function ensureAndroidChannel(): Promise<void> {
-  if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync('default', {
-    name: 'default',
-    importance: Notifications.AndroidImportance.DEFAULT,
-    lightColor: '#C9943B',
-  });
-}
-
 export async function registerForPushNotifications(
   uid: string,
 ): Promise<string | null> {
+  if (isExpoGo) {
+    console.log(
+      '[push] Running in Expo Go — push registration skipped. Build a development build to enable push.',
+    );
+    return null;
+  }
+
+  // Dynamic imports — these modules have side effects at load time and
+  // would crash/warn under Expo Go.
+  const Notifications = await import('expo-notifications');
+  const Device = await import('expo-device');
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+
   if (!Device.isDevice) {
     console.log('[push] Not a physical device — skipping push registration');
     return null;
   }
 
-  await ensureAndroidChannel();
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.DEFAULT,
+      lightColor: '#C9943B',
+    });
+  }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -98,6 +112,9 @@ export async function sendPushNotification({
   body,
   data,
 }: SendPushInput): Promise<void> {
+  // Sending uses Expo's HTTPS API directly — no native module needed,
+  // so this works fine even in Expo Go (it just won't reach anyone
+  // because no devices register tokens in Expo Go).
   const token = await getPushTokenFor(toUid);
   if (!token) {
     console.log('[push] No push token for uid', toUid, '— skipping');
