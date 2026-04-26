@@ -2,7 +2,7 @@
   "expo": {
     "name": "שולחן ערוך",
     "slug": "shulchan-aruch",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
