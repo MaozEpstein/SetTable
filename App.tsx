@@ -12,6 +12,9 @@ import {
 } from '@expo-google-fonts/heebo';
 import { ToastProvider } from './src/components/Toast';
 import { UpdateAvailableModal } from './src/components/UpdateAvailableModal';
+import { initSentry, wrapWithSentry } from './src/services/sentry';
+
+initSentry();
 import { WebFrame } from './src/components/WebFrame';
 import { checkForUpdate, dismissUpdate, type UpdateInfo } from './src/services/updateCheck';
 import { UserProvider, type AuthMethod } from './src/context/UserContext';
@@ -46,7 +49,7 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(style);
 }
 
-export default function App() {
+function App() {
   const [fontsLoaded] = useFonts({
     Heebo_400Regular,
     Heebo_500Medium,
@@ -211,6 +214,8 @@ function loadingScreen() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapWithSentry(App);
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },

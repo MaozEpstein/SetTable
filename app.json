@@ -2,7 +2,7 @@
   "expo": {
     "name": "שולחן ערוך",
     "slug": "shulchan-aruch",
-    "version": "0.4.3",
+    "version": "0.4.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -47,7 +47,8 @@
     "extra": {
       "eas": {
         "projectId": "52f847e8-aeef-4e43-97c2-77924d8377b8"
-      }
+      },
+      "sentryDsn": ""
     },
     "plugins": [
       "expo-font",
@@ -64,7 +65,8 @@
           "photosPermission": "האפליקציה מבקשת גישה לתמונות כדי שתוכלו לבחור תמונות של מאכלים מהגלריה.",
           "cameraPermission": "האפליקציה מבקשת גישה למצלמה כדי שתוכלו לצלם תמונות של מאכלים ולשמור אותן ברשימה."
         }
-      ]
+      ],
+      "@sentry/react-native/expo"
     ],
     "notification": {
       "icon": "./assets/icon.png",
