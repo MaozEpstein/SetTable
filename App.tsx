@@ -11,7 +11,9 @@ import {
   useFonts,
 } from '@expo-google-fonts/heebo';
 import { ToastProvider } from './src/components/Toast';
+import { UpdateAvailableModal } from './src/components/UpdateAvailableModal';
 import { WebFrame } from './src/components/WebFrame';
+import { checkForUpdate, dismissUpdate, type UpdateInfo } from './src/services/updateCheck';
 import { UserProvider, type AuthMethod } from './src/context/UserContext';
 import { auth, isFirebaseConfigured } from './src/firebase';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -55,6 +57,7 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
   // Listen to Firebase auth state. This is the source of truth — survives
   // app restarts because Firebase persists the auth token in localStorage / AsyncStorage.
@@ -88,6 +91,25 @@ export default function App() {
     if (authUser.isAnonymous) return;
     registerForPushNotifications(authUser.uid).catch(() => {});
   }, [authUser]);
+
+  // On Android: check GitHub Releases for a newer APK in the background.
+  // No-op on web (the PWA refreshes itself) and iOS (no sideload).
+  useEffect(() => {
+    let cancelled = false;
+    checkForUpdate().then((info) => {
+      if (!cancelled) setUpdateInfo(info);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleDismissUpdate = () => {
+    if (updateInfo) {
+      dismissUpdate(updateInfo.latestVersion).catch(() => {});
+    }
+    setUpdateInfo(null);
+  };
 
   if (!fontsLoaded || !authChecked) {
     return loadingScreen();
@@ -157,6 +179,9 @@ export default function App() {
           >
             <RootNavigator />
           </UserProvider>
+          {updateInfo && (
+            <UpdateAvailableModal info={updateInfo} onDismiss={handleDismissUpdate} />
+          )}
         </ToastProvider>
       </WebFrame>
     </SafeAreaProvider>
