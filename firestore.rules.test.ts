@@ -156,4 +156,136 @@ describe('userProfiles', () => {
       setDoc(doc(aliceDb, 'userProfiles', 'bob'), { displayName: 'Hacked' }),
     );
   });
+
+  test('cannot set displayName longer than 30 chars', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'userProfiles', 'alice'), {
+        displayName: 'A'.repeat(31),
+      }),
+    );
+  });
+});
+
+describe('foods validation', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'groups', 'g1'), {
+        memberUids: ['alice'],
+        createdBy: 'alice',
+      });
+    });
+  });
+
+  test('member can create well-formed food', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(
+      setDoc(doc(aliceDb, 'groups/g1/foods/f1'), {
+        name: 'חמין',
+        categories: ['meat'],
+        createdBy: 'alice',
+        createdAt: Date.now(),
+      }),
+    );
+  });
+
+  test('cannot create food with name longer than 100 chars', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'groups/g1/foods/f1'), {
+        name: 'X'.repeat(101),
+        categories: ['meat'],
+        createdBy: 'alice',
+        createdAt: Date.now(),
+      }),
+    );
+  });
+
+  test('cannot create food spoofing another user as createdBy', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'groups/g1/foods/f1'), {
+        name: 'חמין',
+        categories: ['meat'],
+        createdBy: 'eve', // ← not alice
+        createdAt: Date.now(),
+      }),
+    );
+  });
+
+  test('cannot create food with future timestamp far ahead', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    const yearFromNow = Date.now() + 365 * 86400 * 1000;
+    await assertFails(
+      setDoc(doc(aliceDb, 'groups/g1/foods/f1'), {
+        name: 'חמין',
+        categories: ['meat'],
+        createdBy: 'alice',
+        createdAt: yearFromNow,
+      }),
+    );
+  });
+
+  test('cannot create food with recipe larger than 5000 chars', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'groups/g1/foods/f1'), {
+        name: 'חמין',
+        categories: ['meat'],
+        createdBy: 'alice',
+        createdAt: Date.now(),
+        recipe: 'X'.repeat(5001),
+      }),
+    );
+  });
+
+  test('cannot create food with too many categories', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'groups/g1/foods/f1'), {
+        name: 'חמין',
+        categories: Array.from({ length: 11 }, (_, i) => `cat${i}`),
+        createdBy: 'alice',
+        createdAt: Date.now(),
+      }),
+    );
+  });
+});
+
+describe('username validation', () => {
+  test('username with invalid characters is rejected', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'usernames', 'has spaces'), {
+        uid: 'alice',
+      }),
+    );
+  });
+
+  test('username too short is rejected', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'usernames', 'ab'), {
+        uid: 'alice',
+      }),
+    );
+  });
+
+  test('username too long is rejected', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'usernames', 'a'.repeat(21)), {
+        uid: 'alice',
+      }),
+    );
+  });
+
+  test('valid username is accepted', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(
+      setDoc(doc(aliceDb, 'usernames', 'alice_99'), {
+        uid: 'alice',
+      }),
+    );
+  });
 });
