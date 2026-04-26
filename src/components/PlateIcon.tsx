@@ -1,48 +1,23 @@
 import { View } from 'react-native';
-import Svg, { Circle, Defs, G, Path, RadialGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
 import { colors } from '../theme';
-
-type SectorState = 'filled' | 'empty';
 
 type Props = {
   size?: number;
-  sectors?: {
-    meat?: SectorState;
-    fish?: SectorState;
-    salad?: SectorState;
-  };
+  // 'filled' = full color challah; 'empty' = grey outline (used in empty states)
+  state?: 'filled' | 'empty';
   background?: 'cream' | 'transparent';
 };
 
-const PLATE_RADIUS = 38;
-const RIM_WIDTH = 1.6;
 const VIEWBOX = 100;
-const CENTER = VIEWBOX / 2;
-
-function arcPath(startAngleDeg: number, endAngleDeg: number, radius: number) {
-  const toXY = (deg: number) => {
-    const r = (deg - 90) * (Math.PI / 180);
-    return {
-      x: CENTER + radius * Math.cos(r),
-      y: CENTER + radius * Math.sin(r),
-    };
-  };
-  const start = toXY(startAngleDeg);
-  const end = toXY(endAngleDeg);
-  const largeArc = endAngleDeg - startAngleDeg <= 180 ? 0 : 1;
-  return `M ${CENTER} ${CENTER} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
-}
-
-const EMPTY = '#E8E2D4';
 
 export function PlateIcon({
   size = 96,
-  sectors = { meat: 'filled', fish: 'filled', salad: 'filled' },
+  state = 'filled',
   background = 'transparent',
 }: Props) {
-  const meatColor = sectors.meat === 'empty' ? EMPTY : colors.secondary;
-  const fishColor = sectors.fish === 'empty' ? EMPTY : colors.primary;
-  const saladColor = sectors.salad === 'empty' ? EMPTY : colors.success;
+  const main = state === 'empty' ? '#C9C2B0' : colors.primary;
+  const seed = state === 'empty' ? '#C9C2B0' : '#1F2A44';
 
   return (
     <View
@@ -56,76 +31,42 @@ export function PlateIcon({
       }}
     >
       <Svg width={size} height={size} viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}>
-        <Defs>
-          <RadialGradient id="plateShade" cx="50%" cy="48%" r="50%">
-            <Stop offset="80%" stopColor="#FFFFFF" />
-            <Stop offset="100%" stopColor="#F1ECE0" />
-          </RadialGradient>
-        </Defs>
-
-        {/* shadow under plate */}
-        <Circle
-          cx={CENTER}
-          cy={CENTER + 1.5}
-          r={PLATE_RADIUS}
-          fill="#1F2A44"
-          opacity={0.08}
-        />
-
-        {/* plate body */}
-        <Circle cx={CENTER} cy={CENTER} r={PLATE_RADIUS} fill="url(#plateShade)" />
-
-        {/* sectors (3 wedges, 120° each, starting at top) */}
-        <G>
-          <Path
-            d={arcPath(-30, 90, PLATE_RADIUS - 6)}
-            fill={meatColor}
-            opacity={0.92}
-          />
-          <Path
-            d={arcPath(90, 210, PLATE_RADIUS - 6)}
-            fill={saladColor}
-            opacity={0.92}
-          />
-          <Path
-            d={arcPath(210, 330, PLATE_RADIUS - 6)}
-            fill={fishColor}
-            opacity={0.92}
-          />
+        {/* sesame seeds */}
+        <G fill={seed} opacity={0.85}>
+          <Ellipse cx={32} cy={28} rx={1} ry={1.4} />
+          <Ellipse cx={42} cy={25} rx={1} ry={1.4} />
+          <Ellipse cx={50} cy={24} rx={1} ry={1.4} />
+          <Ellipse cx={58} cy={25} rx={1} ry={1.4} />
+          <Ellipse cx={68} cy={28} rx={1} ry={1.4} />
         </G>
 
-        {/* white dividers between sectors */}
-        <G stroke="#FFFFFF" strokeWidth={1.4} strokeLinecap="round">
-          <Path d={`M ${CENTER} ${CENTER} L ${CENTER} ${CENTER - PLATE_RADIUS + 6}`} />
-          <Path
-            d={`M ${CENTER} ${CENTER} L ${CENTER + (PLATE_RADIUS - 6) * Math.cos((210 - 90) * (Math.PI / 180))} ${CENTER + (PLATE_RADIUS - 6) * Math.sin((210 - 90) * (Math.PI / 180))}`}
-          />
-          <Path
-            d={`M ${CENTER} ${CENTER} L ${CENTER + (PLATE_RADIUS - 6) * Math.cos((330 - 90) * (Math.PI / 180))} ${CENTER + (PLATE_RADIUS - 6) * Math.sin((330 - 90) * (Math.PI / 180))}`}
-          />
+        {/* loaf outline */}
+        <Path
+          d="M 22 52 Q 22 37 38 37 L 62 37 Q 78 37 78 52 Q 78 67 62 67 L 38 67 Q 22 67 22 52 Z"
+          fill="none"
+          stroke={main}
+          strokeWidth={2}
+          strokeLinejoin="round"
+        />
+
+        {/* braid strands */}
+        <G fill="none" stroke={main} strokeWidth={2.4} strokeLinecap="round">
+          <Path d="M 28 50 C 36 43, 44 57, 52 50 S 68 43, 76 50" opacity={0.95} />
+          <Path d="M 28 53 C 36 60, 44 46, 52 53 S 68 60, 76 53" opacity={0.95} />
         </G>
 
-        {/* center dot */}
-        <Circle cx={CENTER} cy={CENTER} r={2.2} fill="#FFFFFF" />
+        {/* knot accents */}
+        <G fill={main}>
+          <Ellipse cx={36} cy={51.5} rx={1.2} ry={0.7} />
+          <Ellipse cx={44} cy={51.5} rx={1.2} ry={0.7} />
+          <Ellipse cx={52} cy={51.5} rx={1.2} ry={0.7} />
+          <Ellipse cx={60} cy={51.5} rx={1.2} ry={0.7} />
+          <Ellipse cx={68} cy={51.5} rx={1.2} ry={0.7} />
+        </G>
 
-        {/* gold rim */}
-        <Circle
-          cx={CENTER}
-          cy={CENTER}
-          r={PLATE_RADIUS}
-          fill="none"
-          stroke={colors.primary}
-          strokeWidth={RIM_WIDTH}
-        />
-        <Circle
-          cx={CENTER}
-          cy={CENTER}
-          r={PLATE_RADIUS - 5}
-          fill="none"
-          stroke={colors.primary}
-          strokeWidth={0.5}
-          opacity={0.5}
-        />
+        {/* end caps */}
+        <Circle cx={22} cy={52} r={1.8} fill={main} />
+        <Circle cx={78} cy={52} r={1.8} fill={main} />
       </Svg>
     </View>
   );

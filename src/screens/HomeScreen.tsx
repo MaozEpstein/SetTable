@@ -48,10 +48,7 @@ export function HomeScreen({ navigation }: RootStackScreenProps<'Home'>) {
             </View>
           ) : groups.length === 0 ? (
             <View style={styles.emptyCard}>
-              <PlateIcon
-                size={88}
-                sectors={{ meat: 'empty', fish: 'empty', salad: 'empty' }}
-              />
+              <PlateIcon size={88} state="empty" />
               <Text style={styles.emptyTitle}>עוד אין קבוצות</Text>
               <Text style={styles.emptyText}>
                 צרו קבוצה חדשה והזמינו את המשפחה והחברים,

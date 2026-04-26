@@ -65,47 +65,50 @@ export async function registerWithUsername({
   const trimmedEmail = email.trim();
   const trimmedDisplay = displayName.trim();
 
-  // Reserve the username inside a transaction so two registrations can't claim
-  // the same name simultaneously.
-  await runTransaction(db, async (tx) => {
-    const ref = doc(db, USERNAMES, normalizedUsername);
-    const snap = await tx.get(ref);
-    if (snap.exists()) throw new Error('שם המשתמש תפוס. בחר שם אחר.');
-    // Reserve with placeholder; real uid filled in after Firebase Auth creates the user.
-    tx.set(ref, { reserved: true, reservedAt: serverTimestamp() });
-  });
+  // 1. Pre-check (read only — anyone can read usernames per security rules).
+  const existing = await getDoc(doc(db, USERNAMES, normalizedUsername));
+  if (existing.exists()) throw new Error('שם המשתמש תפוס. בחר שם אחר.');
 
-  let cred;
+  // 2. Create the Firebase Auth user. After this we're authenticated, which
+  // is what the Firestore rules require to write the username doc.
+  const cred = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+  const uid = cred.user.uid;
+
   try {
-    cred = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+    // 3. Claim the username atomically (handles the rare race where someone
+    // grabbed the same name between our pre-check and now).
+    await runTransaction(db, async (tx) => {
+      const ref = doc(db, USERNAMES, normalizedUsername);
+      const snap = await tx.get(ref);
+      if (snap.exists()) throw new Error('שם המשתמש תפוס. בחר שם אחר.');
+      tx.set(ref, {
+        uid,
+        email: trimmedEmail,
+        createdAt: Date.now(),
+      });
+    });
+
+    // 4. Write the user profile.
+    await setDoc(doc(db, USER_PROFILES, uid), {
+      uid,
+      username: normalizedUsername,
+      displayName: trimmedDisplay,
+      email: trimmedEmail,
+      authMethod: 'username',
+      createdAt: Date.now(),
+    } satisfies UserProfile);
+
+    return cred.user;
   } catch (err) {
-    // Roll back the username reservation if auth creation fails.
+    // Roll back the auth user so the caller can retry with a different username.
     try {
-      await setDoc(doc(db, USERNAMES, normalizedUsername), { reserved: false });
+      await cred.user.delete();
     } catch {
-      // best-effort cleanup
+      // best-effort cleanup; if delete fails the user is left orphaned but
+      // can still log in via password reset / Google.
     }
     throw err;
   }
-
-  const uid = cred.user.uid;
-
-  // Finalize the username record + write the user profile.
-  await setDoc(doc(db, USERNAMES, normalizedUsername), {
-    uid,
-    email: trimmedEmail,
-    createdAt: Date.now(),
-  });
-  await setDoc(doc(db, USER_PROFILES, uid), {
-    uid,
-    username: normalizedUsername,
-    displayName: trimmedDisplay,
-    email: trimmedEmail,
-    authMethod: 'username',
-    createdAt: Date.now(),
-  } satisfies UserProfile);
-
-  return cred.user;
 }
 
 // ----- Sign in with username -----
