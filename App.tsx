@@ -32,6 +32,18 @@ if (!I18nManager.isRTL) {
   I18nManager.forceRTL(true);
 }
 
+// On web: make every interactive element show a pointer cursor + smooth
+// hover transitions. Tiny CSS injection at module load time.
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.innerHTML = `
+    [role="button"], button, a, [tabindex] { cursor: pointer; }
+    [role="button"]:not([aria-disabled="true"]) { transition: opacity 120ms, background-color 120ms; }
+    [role="button"]:not([aria-disabled="true"]):hover { opacity: 0.92; }
+  `;
+  document.head.appendChild(style);
+}
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     Heebo_400Regular,

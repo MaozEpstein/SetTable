@@ -36,14 +36,15 @@ export function PrimaryButton({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.button,
         {
           backgroundColor,
           borderColor,
-          opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1,
+          opacity: isDisabled ? 0.5 : pressed ? 0.85 : hovered ? 0.92 : 1,
           alignSelf: fullWidth ? 'stretch' : 'auto',
         },
+        hovered && !isDisabled && styles.hovered,
       ]}
     >
       <View style={styles.content}>
@@ -66,6 +67,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radius.lg,
     borderWidth: 2,
+    ...(({
+      cursor: 'pointer',
+      transitionProperty: 'opacity, box-shadow, transform',
+      transitionDuration: '120ms',
+    } as object) as Record<string, never>),
+  },
+  hovered: {
+    ...(({
+      boxShadow: '0 4px 14px rgba(0,0,0,0.10)',
+    } as object) as Record<string, never>),
+    transform: [{ translateY: -1 }],
   },
   content: {
     flexDirection: 'row',

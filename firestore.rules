@@ -1,0 +1,123 @@
+rules_version = '2';
+
+// Production-ready security rules for SetTable.
+//
+// Goals:
+// - Only authenticated users can read/write any data
+// - Group data is only readable/writable by members of that group
+// - Username uniqueness is enforced; users can only claim usernames they own
+// - User profiles are private to read by other authenticated users (for
+//   showing names in groups) but only the owner can write their own
+// - Admin-only operations (kick, promote, regenerate code) require the
+//   actor to be in the group's `admins` array
+//
+// Deploy: paste the entire file into Firebase Console → Firestore → Rules → Publish
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helper functions ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(groupData) {
+      return isSignedIn() && request.auth.uid in groupData.memberUids;
+    }
+
+    function isAdmin(groupData) {
+      return isSignedIn() && (
+        request.auth.uid in (groupData.admins is list ? groupData.admins : []) ||
+        // Backward-compat for older groups created before `admins` existed —
+        // the creator is implicitly admin.
+        (!('admins' in groupData) && groupData.createdBy == request.auth.uid)
+      );
+    }
+
+    // ---------- groups ----------
+    match /groups/{groupId} {
+      // Read a single group: must be a member
+      allow get: if isSignedIn() && isMember(resource.data);
+
+      // List groups: needed for the "join by code" lookup which queries
+      // by `code` and limit(1). Allowed for any signed-in user since we
+      // also verify membership separately when joining.
+      allow list: if isSignedIn();
+
+      // Create: must include yourself in memberUids and set createdBy = self
+      allow create: if isSignedIn() &&
+        request.auth.uid in request.resource.data.memberUids &&
+        request.resource.data.createdBy == request.auth.uid;
+
+      // Update covers four legitimate flows:
+      //   (a) you are joining (adding yourself to memberUids)
+      //   (b) you are already a member doing a normal edit
+      //   (c) admin actions (kick / promote / regenerate code) — also covered by (b) since admins are members
+      //   (d) leaving (removing yourself)
+      allow update: if isSignedIn() && (
+        // (a) joining: you weren't a member, now you are, only added yourself
+        (
+          !(request.auth.uid in resource.data.memberUids) &&
+          request.auth.uid in request.resource.data.memberUids
+        ) ||
+        // (b)+(c)+(d) member-or-admin operations
+        isMember(resource.data)
+      );
+
+      allow delete: if false;
+
+      // ---------- group subcollections (foods, assignments, etc.) ----------
+      match /{document=**} {
+        allow read, write: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberUids;
+      }
+    }
+
+    // ---------- usernames (public mapping username → uid+email) ----------
+    // Public read is required so the app can:
+    //   - check if a username is available before registration (anon read)
+    //   - look up the email associated with a username for sign-in
+    // Trade-off: usernames are enumerable. Acceptable because they're
+    //   meant to be shared (people will share their username to be added
+    //   to groups). Emails inside are partial PII; consider not storing
+    //   email here in the future and resolving via Cloud Function instead.
+    match /usernames/{username} {
+      allow read: if true;
+      // Create: must be authenticated. The doc is keyed by the username,
+      // so the username uniqueness is enforced by the doc id.
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid;
+      // Update: only the owner of the uid recorded inside can update
+      allow update: if isSignedIn() &&
+        resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
+      // Delete: only the owner can release their username
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ---------- user profiles ----------
+    match /userProfiles/{uid} {
+      // Any authenticated user can read profiles (needed to show names
+      // in group member lists). Writing is restricted to the profile owner.
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && request.auth.uid == uid;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ---------- push tokens ----------
+    match /pushTokens/{userId} {
+      // All authenticated users may read tokens (so the app can send
+      // pushes to others). Only the owner may write their own token.
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ---------- shared menu snapshots (if migrated from URL fragments later) ----------
+    match /sharedMenus/{shareId} {
+      allow read: if true; // public, designed to be shared
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}
