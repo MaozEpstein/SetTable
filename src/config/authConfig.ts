@@ -3,7 +3,7 @@
 // must never be checked in (we only use the public-flow PKCE for Web/Android).
 export const GOOGLE_OAUTH = {
   webClientId:
-    '763233186707-1jobq6e1stiiradd36bt00pd90n8g2gc.apps.googleusercontent.com',
+    '763233186707-b9ut4qcipo4qak895nqa12g3gr4qojh2.apps.googleusercontent.com',
   androidClientId:
     '763233186707-dcarmmpiadf2nbg7agmg31qh9gqfb2d1.apps.googleusercontent.com',
   // iOS client not provisioned (we ship iOS via PWA, which uses webClientId via redirect).
