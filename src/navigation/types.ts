@@ -7,6 +7,7 @@ export type RootStackParamList = {
   Group: { groupId: string };
   FoodDetail: { groupId: string; foodId: string };
   Settings: undefined;
+  LinkAccount: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =

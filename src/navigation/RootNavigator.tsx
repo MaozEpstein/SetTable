@@ -5,6 +5,7 @@ import { FoodDetailScreen } from '../screens/FoodDetailScreen';
 import { GroupScreen } from '../screens/GroupScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { JoinGroupScreen } from '../screens/JoinGroupScreen';
+import { LinkAccountScreenWrapper } from '../screens/LinkAccountScreenWrapper';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { colors } from '../theme';
 import type { RootStackParamList } from './types';
@@ -27,6 +28,7 @@ export function RootNavigator() {
         <Stack.Screen name="Group" component={GroupScreen} />
         <Stack.Screen name="FoodDetail" component={FoodDetailScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="LinkAccount" component={LinkAccountScreenWrapper} />
       </Stack.Navigator>
     </NavigationContainer>
   );

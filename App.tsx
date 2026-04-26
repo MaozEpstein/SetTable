@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, I18nManager, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import {
   Heebo_400Regular,
   Heebo_500Medium,
@@ -10,14 +11,19 @@ import {
   useFonts,
 } from '@expo-google-fonts/heebo';
 import { WebFrame } from './src/components/WebFrame';
-import { UserProvider } from './src/context/UserContext';
-import { isFirebaseConfigured } from './src/firebase';
+import { UserProvider, type AuthMethod } from './src/context/UserContext';
+import { auth, isFirebaseConfigured } from './src/firebase';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { AuthGate } from './src/screens/AuthGate';
 import { FirebaseSetupScreen } from './src/screens/FirebaseSetupScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
-import { ensureAnonymousAuth } from './src/services/auth';
+import {
+  getUserProfile,
+  signOutUser,
+  updateDisplayName,
+  type UserProfile,
+} from './src/services/userAuth';
 import { registerForPushNotifications } from './src/services/push';
-import { clearUserName, getUserName, setUserName as persistUserName } from './src/storage';
 import { colors } from './src/theme';
 
 if (!I18nManager.isRTL) {
@@ -32,117 +38,106 @@ export default function App() {
     Heebo_700Bold,
   });
 
-  const [userName, setUserName] = useState<string | null>(null);
-  const [nameChecked, setNameChecked] = useState(false);
-  const [uid, setUid] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
+  // Listen to Firebase auth state. This is the source of truth — survives
+  // app restarts because Firebase persists the auth token in localStorage / AsyncStorage.
   useEffect(() => {
-    getUserName().then((name) => {
-      setUserName(name);
-      setNameChecked(true);
+    if (!isFirebaseConfigured) {
+      setAuthChecked(true);
+      return;
+    }
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setAuthUser(u);
+      setAuthChecked(true);
     });
+    return unsub;
   }, []);
 
+  // Load profile whenever the auth user changes.
   useEffect(() => {
-    if (!isFirebaseConfigured) return;
-    if (!userName) return;
-    if (uid) return;
+    if (!authUser) {
+      setProfile(null);
+      return;
+    }
+    setProfileLoading(true);
+    getUserProfile(authUser.uid)
+      .then((p) => setProfile(p))
+      .finally(() => setProfileLoading(false));
+  }, [authUser]);
 
-    ensureAnonymousAuth()
-      .then((user) => setUid(user.uid))
-      .catch((err) => {
-        setAuthError(err instanceof Error ? err.message : String(err));
-      });
-  }, [userName, uid]);
-
+  // Register for push only when we have a real (non-anonymous) signed-in user.
   useEffect(() => {
-    if (!uid) return;
-    registerForPushNotifications(uid).catch(() => {});
-  }, [uid]);
+    if (!authUser) return;
+    if (authUser.isAnonymous) return;
+    registerForPushNotifications(authUser.uid).catch(() => {});
+  }, [authUser]);
 
-  if (!fontsLoaded || !nameChecked) {
-    return (
-      <GestureHandlerRootView style={styles.flex}>
-        <SafeAreaProvider>
-        <WebFrame>
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} size="large" />
-        </View>
-        </WebFrame>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    );
+  if (!fontsLoaded || !authChecked) {
+    return loadingScreen();
   }
 
   if (!isFirebaseConfigured) {
-    return (
-      <GestureHandlerRootView style={styles.flex}>
-        <SafeAreaProvider>
-        <WebFrame>
-        <FirebaseSetupScreen />
-        </WebFrame>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
+    return wrapped(<FirebaseSetupScreen />);
+  }
+
+  // Not signed in — show auth gate (login + register + Google).
+  if (!authUser) {
+    return wrapped(<AuthGate />);
+  }
+
+  // Signed in but profile still loading.
+  if (profileLoading) {
+    return loadingScreen();
+  }
+
+  // Signed in but no display name yet (just registered, or first Google login
+  // without a Google-provided name) — ask for one.
+  const displayName = profile?.displayName?.trim();
+  if (!displayName) {
+    return wrapped(
+      <OnboardingScreen
+        onComplete={async (name) => {
+          await updateDisplayName(authUser.uid, name);
+          setProfile((prev) =>
+            prev
+              ? { ...prev, displayName: name }
+              : {
+                  uid: authUser.uid,
+                  displayName: name,
+                  authMethod: authUser.isAnonymous ? 'anonymous' : 'username',
+                  createdAt: Date.now(),
+                },
+          );
+        }}
+      />,
     );
   }
 
-  if (!userName) {
-    return (
-      <GestureHandlerRootView style={styles.flex}>
-        <SafeAreaProvider>
-        <WebFrame>
-        <OnboardingScreen onComplete={(name) => setUserName(name)} />
-        </WebFrame>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    );
-  }
-
-  if (authError) {
-    return (
-      <GestureHandlerRootView style={styles.flex}>
-        <SafeAreaProvider>
-        <WebFrame>
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} size="large" />
-        </View>
-        </WebFrame>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    );
-  }
-
-  if (!uid) {
-    return (
-      <GestureHandlerRootView style={styles.flex}>
-        <SafeAreaProvider>
-        <WebFrame>
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} size="large" />
-        </View>
-        </WebFrame>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    );
-  }
+  const authMethod: AuthMethod =
+    profile?.authMethod ?? (authUser.isAnonymous ? 'anonymous' : 'username');
 
   const handleSetUserName = (name: string) => {
-    persistUserName(name).catch(() => {});
-    setUserName(name);
+    updateDisplayName(authUser.uid, name).catch(() => {});
+    setProfile((prev) => (prev ? { ...prev, displayName: name } : prev));
   };
 
   const handleSignOut = () => {
-    clearUserName().catch(() => {});
-    setUserName(null);
+    signOutUser().catch(() => {});
   };
 
   return (
     <SafeAreaProvider>
       <WebFrame>
         <UserProvider
-          uid={uid}
-          userName={userName}
+          uid={authUser.uid}
+          userName={displayName}
+          username={profile?.username}
+          email={profile?.email}
+          authMethod={authMethod}
           setUserName={handleSetUserName}
           signOut={handleSignOut}
         >
@@ -150,6 +145,30 @@ export default function App() {
         </UserProvider>
       </WebFrame>
     </SafeAreaProvider>
+  );
+}
+
+function wrapped(child: React.ReactNode) {
+  return (
+    <GestureHandlerRootView style={styles.flex}>
+      <SafeAreaProvider>
+        <WebFrame>{child}</WebFrame>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function loadingScreen() {
+  return (
+    <GestureHandlerRootView style={styles.flex}>
+      <SafeAreaProvider>
+        <WebFrame>
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.primary} size="large" />
+          </View>
+        </WebFrame>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

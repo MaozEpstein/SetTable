@@ -21,7 +21,7 @@ import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { RootStackScreenProps } from '../navigation/types';
 
 export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>) {
-  const { uid, userName, setUserName, signOut } = useUser();
+  const { uid, userName, username, email, authMethod, setUserName, signOut } = useUser();
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(userName);
   const [saving, setSaving] = useState(false);
@@ -56,9 +56,13 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
   };
 
   const handleSignOut = () => {
+    const warning =
+      authMethod === 'anonymous'
+        ? 'אתה מחובר כאורח — אם תתנתק כעת תאבד את הקבוצות שלך.\n\nמומלץ להצמיד חשבון לפני שתתנתק.'
+        : 'תוכל להיכנס שוב מכל מכשיר עם פרטי ההתחברות שלך.';
     Alert.alert(
       'התנתקות',
-      'הפרטים שלך יימחקו מהמכשיר ותצטרך להזין את השם מחדש.\n\nהקבוצות שלך יישארו בענן (אם תרצה לעזוב קבוצה, עשה זאת מתוך הקבוצה עצמה).',
+      warning,
       [
         { text: 'ביטול', style: 'cancel' },
         {
@@ -69,6 +73,13 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
       ],
     );
   };
+
+  const authLabel =
+    authMethod === 'google'
+      ? `Google · ${email ?? ''}`
+      : authMethod === 'username'
+        ? `שם משתמש · ${username ?? ''}`
+        : 'אורח (לא מוצמד)';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -138,6 +149,27 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.sectionLabel}>חשבון</Text>
+            <View style={styles.card}>
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>סוג</Text>
+                <Text style={styles.fieldMuted}>{authLabel}</Text>
+              </View>
+            </View>
+            {authMethod === 'anonymous' && (
+              <Pressable
+                onPress={() => navigation.navigate('LinkAccount')}
+                style={({ pressed }) => [styles.linkCard, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={styles.linkTitle}>📌 הצמד חשבון</Text>
+                <Text style={styles.linkHelper}>
+                  שמור את הזיהוי שלך לתמיד עם שם משתמש וסיסמה. תוכל להיכנס מכל מכשיר.
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.sectionLabel}>פרטיות</Text>
             <Pressable
               onPress={handleSignOut}
@@ -145,7 +177,9 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
             >
               <Text style={styles.dangerTitle}>התנתק</Text>
               <Text style={styles.dangerHelper}>
-                ימחק את השם המקומי ויחזיר אותך למסך הפתיחה
+                {authMethod === 'anonymous'
+                  ? 'ימחק את החשבון האנונימי. הקבוצות יילכו לאיבוד.'
+                  : 'יסיים את ההפעלה. תוכל להיכנס שוב עם הפרטים שלך.'}
               </Text>
             </Pressable>
           </View>
@@ -261,6 +295,29 @@ const styles = StyleSheet.create({
   },
   buttonHalf: {
     flex: 1,
+  },
+  linkCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    gap: spacing.xs,
+  },
+  linkTitle: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.bold,
+    color: colors.primary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  linkHelper: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: 20,
   },
   dangerCard: {
     backgroundColor: colors.surface,

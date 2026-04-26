@@ -16,6 +16,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.maoz.shulchanaruch",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FBF7F0"
@@ -36,7 +37,9 @@
       "bundler": "metro"
     },
     "extra": {
-      "eas": {}
+      "eas": {
+        "projectId": "52f847e8-aeef-4e43-97c2-77924d8377b8"
+      }
     },
     "plugins": [
       "expo-font",
@@ -45,7 +48,8 @@
         {
           "color": "#C9943B"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "notification": {
       "icon": "./assets/icon.png",
