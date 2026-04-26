@@ -3,7 +3,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const KEYS = {
   userName: '@shulchan/userName',
   groupIds: '@shulchan/groupIds',
+  foodsViewMode: '@shulchan/foodsViewMode',
 } as const;
+
+export type FoodsViewMode = 'list' | 'gallery';
+
+export async function getFoodsViewMode(): Promise<FoodsViewMode> {
+  const raw = await AsyncStorage.getItem(KEYS.foodsViewMode);
+  return raw === 'gallery' ? 'gallery' : 'list';
+}
+
+export async function setFoodsViewMode(mode: FoodsViewMode): Promise<void> {
+  await AsyncStorage.setItem(KEYS.foodsViewMode, mode);
+}
 
 export async function getUserName(): Promise<string | null> {
   return AsyncStorage.getItem(KEYS.userName);

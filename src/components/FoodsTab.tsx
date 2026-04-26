@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AddCategoryModal } from './AddCategoryModal';
@@ -8,7 +8,13 @@ import { CategoryTabs, type CategorySubTab } from './CategoryTabs';
 import { PrimaryButton } from './PrimaryButton';
 import { FoodCardSkeleton } from './Skeleton';
 import { useFoods } from '../hooks/useFoods';
+import { cloudinaryThumbnail } from '../services/cloudinary';
 import { removeCustomCategory } from '../services/groups';
+import {
+  getFoodsViewMode,
+  setFoodsViewMode,
+  type FoodsViewMode,
+} from '../storage';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
   getAllCategories,
@@ -33,6 +39,17 @@ export function FoodsTab({ group }: Props) {
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<CategorySubTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewModeState] = useState<FoodsViewMode>('list');
+
+  useEffect(() => {
+    getFoodsViewMode().then(setViewModeState);
+  }, []);
+
+  const toggleViewMode = () => {
+    const next: FoodsViewMode = viewMode === 'list' ? 'gallery' : 'list';
+    setViewModeState(next);
+    setFoodsViewMode(next).catch(() => {});
+  };
 
   const categories = useMemo(() => getAllCategories(group), [group]);
 
@@ -137,27 +154,44 @@ export function FoodsTab({ group }: Props) {
         />
       </View>
 
-      <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="חיפוש מאכל..."
-          placeholderTextColor={colors.textMuted}
-          style={styles.searchInput}
-          textAlign="right"
-          returnKeyType="search"
-          clearButtonMode="while-editing"
-        />
-        {searchQuery.length > 0 && (
-          <Pressable
-            onPress={() => setSearchQuery('')}
-            hitSlop={8}
-            style={styles.clearBtn}
-          >
-            <Text style={styles.clearBtnText}>✕</Text>
-          </Pressable>
-        )}
+      <View style={styles.searchRow}>
+        <View style={styles.searchWrap}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="חיפוש מאכל..."
+            placeholderTextColor={colors.textMuted}
+            style={styles.searchInput}
+            textAlign="right"
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable
+              onPress={() => setSearchQuery('')}
+              hitSlop={8}
+              style={styles.clearBtn}
+            >
+              <Text style={styles.clearBtnText}>✕</Text>
+            </Pressable>
+          )}
+        </View>
+        <Pressable
+          onPress={toggleViewMode}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.viewToggle,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
+          accessibilityLabel={
+            viewMode === 'list' ? 'עבור לתצוגת גלריה' : 'עבור לתצוגת רשימה'
+          }
+        >
+          <Text style={styles.viewToggleIcon}>
+            {viewMode === 'list' ? '🖼️' : '📋'}
+          </Text>
+        </Pressable>
       </View>
 
       <CategoryTabs
@@ -208,13 +242,11 @@ export function FoodsTab({ group }: Props) {
                   {cat.emoji} {cat.label}
                   <Text style={styles.count}> · {items.length}</Text>
                 </Text>
-                {items.map((food) => (
-                  <FoodRow
-                    key={food.id}
-                    food={food}
-                    onPress={() => handleOpenFood(food)}
-                  />
-                ))}
+                <FoodList
+                  items={items}
+                  viewMode={viewMode}
+                  onOpenFood={handleOpenFood}
+                />
               </View>
             );
           })
@@ -234,13 +266,11 @@ export function FoodsTab({ group }: Props) {
               {items.length === 0 ? (
                 <Text style={styles.emptyInline}>אין מאכלים בקטגוריה זו</Text>
               ) : (
-                items.map((food) => (
-                  <FoodRow
-                    key={food.id}
-                    food={food}
-                    onPress={() => handleOpenFood(food)}
-                  />
-                ))
+                <FoodList
+                  items={items}
+                  viewMode={viewMode}
+                  onOpenFood={handleOpenFood}
+                />
               )}
             </View>
           );
@@ -267,16 +297,61 @@ export function FoodsTab({ group }: Props) {
   );
 }
 
+function FoodList({
+  items,
+  viewMode,
+  onOpenFood,
+}: {
+  items: Food[];
+  viewMode: FoodsViewMode;
+  onOpenFood: (food: Food) => void;
+}) {
+  if (viewMode === 'gallery') {
+    return (
+      <View style={styles.galleryGrid}>
+        {items.map((food) => (
+          <GalleryCard
+            key={food.id}
+            food={food}
+            onPress={() => onOpenFood(food)}
+          />
+        ))}
+      </View>
+    );
+  }
+  return (
+    <>
+      {items.map((food) => (
+        <FoodRow
+          key={food.id}
+          food={food}
+          onPress={() => onOpenFood(food)}
+        />
+      ))}
+    </>
+  );
+}
+
 function FoodRow({ food, onPress }: { food: Food; onPress: () => void }) {
   const hasDetails =
     !!food.recipe?.trim() ||
     !!food.notes?.trim() ||
     (food.images?.length ?? 0) > 0;
+  const thumbUrl = food.images?.[0]
+    ? cloudinaryThumbnail(food.images[0], 96)
+    : null;
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
     >
+      {thumbUrl ? (
+        <Image source={{ uri: thumbUrl }} style={styles.rowThumb} />
+      ) : (
+        <View style={[styles.rowThumb, styles.rowThumbPlaceholder]}>
+          <Text style={styles.rowThumbPlaceholderText}>🍽️</Text>
+        </View>
+      )}
       <Text style={styles.foodName}>
         {food.isFavorite ? '⭐ ' : ''}
         {food.name}
@@ -285,13 +360,38 @@ function FoodRow({ food, onPress }: { food: Food; onPress: () => void }) {
         {hasDetails && (
           <View style={styles.detailsBadge}>
             <Text style={styles.detailsBadgeText}>
-              {(food.images?.length ?? 0) > 0 ? '📷 ' : ''}
               {food.recipe?.trim() ? '📝 ' : ''}
               {food.notes?.trim() ? '💭' : ''}
             </Text>
           </View>
         )}
         <Text style={styles.chevron}>‹</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function GalleryCard({ food, onPress }: { food: Food; onPress: () => void }) {
+  const thumbUrl = food.images?.[0]
+    ? cloudinaryThumbnail(food.images[0], 400)
+    : null;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.galleryCard, { opacity: pressed ? 0.7 : 1 }]}
+    >
+      {thumbUrl ? (
+        <Image source={{ uri: thumbUrl }} style={styles.galleryImage} />
+      ) : (
+        <View style={[styles.galleryImage, styles.galleryPlaceholder]}>
+          <Text style={styles.galleryPlaceholderEmoji}>🍽️</Text>
+        </View>
+      )}
+      <View style={styles.galleryCaption}>
+        <Text style={styles.galleryName} numberOfLines={2}>
+          {food.isFavorite ? '⭐ ' : ''}
+          {food.name}
+        </Text>
       </View>
     </Pressable>
   );
@@ -360,12 +460,70 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.sm,
+  },
+  rowThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.background,
+  },
+  rowThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  rowThumbPlaceholderText: {
+    fontSize: 22,
+    opacity: 0.5,
+  },
+  galleryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  galleryCard: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  galleryImage: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: colors.background,
+  },
+  galleryPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  galleryPlaceholderEmoji: {
+    fontSize: 48,
+    opacity: 0.4,
+  },
+  galleryCaption: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  galleryName: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bold,
+    color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: 20,
   },
   foodName: {
     flex: 1,
@@ -394,7 +552,25 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: fontFamily.regular,
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+  },
+  viewToggle: {
+    width: 48,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewToggleIcon: {
+    fontSize: fontSize.lg,
+  },
   searchWrap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,

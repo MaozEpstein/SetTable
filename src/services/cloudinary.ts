@@ -45,3 +45,14 @@ export async function uploadImageToCloudinary(localUri: string): Promise<string>
 
   return data.secure_url;
 }
+
+// Insert Cloudinary URL transformations to deliver a small, optimized
+// thumbnail (auto format/quality, square crop). Falls back to the
+// original URL if it isn't a Cloudinary delivery URL.
+export function cloudinaryThumbnail(url: string, size = 120): string {
+  const marker = '/image/upload/';
+  const idx = url.indexOf(marker);
+  if (idx === -1) return url;
+  const transform = `f_auto,q_auto,c_fill,w_${size},h_${size}/`;
+  return url.slice(0, idx + marker.length) + transform + url.slice(idx + marker.length);
+}
