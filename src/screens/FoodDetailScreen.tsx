@@ -142,7 +142,42 @@ export function FoodDetailScreen({
     setEditing(false);
   };
 
-  const handlePickImage = async () => {
+  const processAndUpload = async (uri: string) => {
+    setUploadingImage(true);
+    try {
+      const manipulated = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      await addImageToFood(groupId, foodId, manipulated.uri);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      Alert.alert('אופס', `לא הצלחנו להעלות תמונה.\n${message}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'הרשאת מצלמה נדרשת',
+        'כדי לצלם תמונה, יש לאשר גישה למצלמה בהגדרות הטלפון. אפשר גם לבחור תמונה מהגלריה במקום.',
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+    await processAndUpload(result.assets[0].uri);
+  };
+
+  const handlePickFromGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('הרשאה נדרשת', 'אפשר את הגישה לתמונות בהגדרות הטלפון.');
@@ -154,23 +189,20 @@ export function FoodDetailScreen({
       quality: 0.85,
     });
     if (result.canceled) return;
+    await processAndUpload(result.assets[0].uri);
+  };
 
-    setUploadingImage(true);
-    try {
-      const asset = result.assets[0];
-      // Resize to max 1024 wide, JPEG quality 0.7
-      const manipulated = await ImageManipulator.manipulateAsync(
-        asset.uri,
-        [{ resize: { width: 1024 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
-      );
-      await addImageToFood(groupId, foodId, manipulated.uri);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      Alert.alert('אופס', `לא הצלחנו להעלות תמונה.\n${message}`);
-    } finally {
-      setUploadingImage(false);
-    }
+  const handlePickImage = () => {
+    Alert.alert(
+      'הוספת תמונה',
+      'איך תרצה להוסיף תמונה?',
+      [
+        { text: '📷 צלם עכשיו', onPress: handleTakePhoto },
+        { text: '🖼️ בחר מהגלריה', onPress: handlePickFromGallery },
+        { text: 'ביטול', style: 'cancel' },
+      ],
+      { cancelable: true },
+    );
   };
 
   const handleDeleteImage = (url: string) => {

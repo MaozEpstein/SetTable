@@ -2,7 +2,7 @@
   "expo": {
     "name": "שולחן ערוך",
     "slug": "shulchan-aruch",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -13,7 +13,11 @@
       "backgroundColor": "#FBF7F0"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "האפליקציה מבקשת גישה למצלמה כדי שתוכלו לצלם תמונות של מאכלים ולשמור אותן ברשימה.",
+        "NSPhotoLibraryUsageDescription": "האפליקציה מבקשת גישה לתמונות כדי שתוכלו לבחור תמונות של מאכלים מהגלריה."
+      }
     },
     "android": {
       "package": "com.maoz.shulchanaruch",
@@ -22,7 +26,11 @@
         "backgroundColor": "#FBF7F0"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -49,7 +57,14 @@
           "color": "#C9943B"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "האפליקציה מבקשת גישה לתמונות כדי שתוכלו לבחור תמונות של מאכלים מהגלריה.",
+          "cameraPermission": "האפליקציה מבקשת גישה למצלמה כדי שתוכלו לצלם תמונות של מאכלים ולשמור אותן ברשימה."
+        }
+      ]
     ],
     "notification": {
       "icon": "./assets/icon.png",
