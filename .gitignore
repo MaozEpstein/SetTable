@@ -41,3 +41,4 @@ yarn-error.*
 /android
 test-results/
 playwright-report/
+.firebase/

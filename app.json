@@ -55,6 +55,12 @@
       "icon": "./assets/icon.png",
       "color": "#C9943B",
       "iosDisplayInForeground": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/52f847e8-aeef-4e43-97c2-77924d8377b8"
     }
   }
 }

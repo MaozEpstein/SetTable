@@ -234,6 +234,7 @@ export function FoodsTab({ group }: Props) {
         visible={foodModalVisible}
         groupId={groupId}
         categories={categories}
+        existingNames={foods.map((f) => f.name)}
         onClose={() => setFoodModalVisible(false)}
         onCreated={(newFoodId) =>
           navigation.navigate('FoodDetail', { groupId, foodId: newFoodId })

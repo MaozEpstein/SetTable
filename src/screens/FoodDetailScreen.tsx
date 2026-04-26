@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { FullScreenTextEditor } from '../components/FullScreenTextEditor';
 import { ImageViewerModal } from '../components/ImageViewerModal';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -66,6 +67,8 @@ export function FoodDetailScreen({
   const [viewerIndex, setViewerIndex] = useState(0);
   const [slotPickerOpen, setSlotPickerOpen] = useState(false);
   const [addingToSlot, setAddingToSlot] = useState(false);
+  const [recipeEditorOpen, setRecipeEditorOpen] = useState(false);
+  const [notesEditorOpen, setNotesEditorOpen] = useState(false);
 
   // Sync local edit state when food loads or edit mode toggles on
   useEffect(() => {
@@ -446,16 +449,26 @@ export function FoodDetailScreen({
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>📝 מתכון</Text>
             {editing ? (
-              <TextInput
-                value={recipe}
-                onChangeText={setRecipe}
-                style={[styles.input, styles.inputMultiline]}
-                placeholder="כתבו כאן את המתכון..."
-                placeholderTextColor={colors.textMuted}
-                multiline
-                textAlignVertical="top"
-                textAlign="right"
-              />
+              <Pressable
+                onPress={() => setRecipeEditorOpen(true)}
+                style={({ pressed }) => [
+                  styles.editableCard,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                {recipe.trim() ? (
+                  <Text style={styles.bodyText} numberOfLines={6}>
+                    {recipe}
+                  </Text>
+                ) : (
+                  <Text style={styles.editableHint}>
+                    הקש כדי לכתוב את המתכון במסך מלא ✎
+                  </Text>
+                )}
+                {recipe.trim() ? (
+                  <Text style={styles.editableEditLink}>הקש לעריכה ✎</Text>
+                ) : null}
+              </Pressable>
             ) : food.recipe?.trim() ? (
               <View style={styles.textCard}>
                 <Text style={styles.bodyText}>{food.recipe}</Text>
@@ -468,16 +481,26 @@ export function FoodDetailScreen({
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>💭 הערות נוספות</Text>
             {editing ? (
-              <TextInput
-                value={notes}
-                onChangeText={setNotes}
-                style={[styles.input, styles.inputMultiline, { minHeight: 80 }]}
-                placeholder="הערות, רעיונות, תזכורות..."
-                placeholderTextColor={colors.textMuted}
-                multiline
-                textAlignVertical="top"
-                textAlign="right"
-              />
+              <Pressable
+                onPress={() => setNotesEditorOpen(true)}
+                style={({ pressed }) => [
+                  styles.editableCard,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                {notes.trim() ? (
+                  <Text style={styles.bodyText} numberOfLines={6}>
+                    {notes}
+                  </Text>
+                ) : (
+                  <Text style={styles.editableHint}>
+                    הקש כדי לכתוב הערות במסך מלא ✎
+                  </Text>
+                )}
+                {notes.trim() ? (
+                  <Text style={styles.editableEditLink}>הקש לעריכה ✎</Text>
+                ) : null}
+              </Pressable>
             ) : food.notes?.trim() ? (
               <View style={styles.textCard}>
                 <Text style={styles.bodyText}>{food.notes}</Text>
@@ -530,6 +553,24 @@ export function FoodDetailScreen({
         slots={slots}
         onPick={handlePickSlot}
         onClose={() => setSlotPickerOpen(false)}
+      />
+
+      <FullScreenTextEditor
+        visible={recipeEditorOpen}
+        title="📝 מתכון"
+        initialValue={recipe}
+        placeholder="כתבו כאן את המתכון..."
+        onSave={setRecipe}
+        onClose={() => setRecipeEditorOpen(false)}
+      />
+
+      <FullScreenTextEditor
+        visible={notesEditorOpen}
+        title="💭 הערות נוספות"
+        initialValue={notes}
+        placeholder="הערות, רעיונות, תזכורות..."
+        onSave={setNotes}
+        onClose={() => setNotesEditorOpen(false)}
       />
     </SafeAreaView>
   );
@@ -631,6 +672,30 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  editableCard: {
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    minHeight: 80,
+    gap: spacing.xs,
+  },
+  editableHint: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.medium,
+    color: colors.primary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  editableEditLink: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.medium,
+    color: colors.primary,
+    textAlign: 'left',
+    writingDirection: 'rtl',
   },
   bodyText: {
     fontSize: fontSize.md,

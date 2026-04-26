@@ -6,6 +6,7 @@ export type FoodCategory =
   | 'dips'
   | 'dessert'
   | 'cake'
+  | 'dairy'
   | (string & {}); // allows custom IDs while keeping autocomplete on the defaults
 
 export type MealSlot =
@@ -157,6 +158,7 @@ export const FOOD_CATEGORIES: { key: FoodCategory; label: string; emoji: string 
   { key: 'dips', label: 'מטבלים', emoji: '🥣' },
   { key: 'dessert', label: 'מנה אחרונה', emoji: '🍰' },
   { key: 'cake', label: 'עוגות', emoji: '🎂' },
+  { key: 'dairy', label: 'חלבי', emoji: '🧀' },
 ];
 
 export const MEAL_SLOTS: { key: MealSlot; label: string; shortLabel: string; emoji: string }[] = [

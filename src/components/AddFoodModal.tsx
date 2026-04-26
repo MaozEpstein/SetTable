@@ -21,14 +21,20 @@ type Props = {
   visible: boolean;
   groupId: string;
   categories: CategoryInfo[];
+  existingNames?: string[];
   onClose: () => void;
   onCreated?: (foodId: string) => void;
 };
+
+function normalizeName(s: string): string {
+  return s.trim().replace(/\s+/g, ' ').toLowerCase();
+}
 
 export function AddFoodModal({
   visible,
   groupId,
   categories,
+  existingNames = [],
   onClose,
   onCreated,
 }: Props) {
@@ -38,7 +44,11 @@ export function AddFoodModal({
   const [saving, setSaving] = useState(false);
 
   const trimmed = name.trim();
-  const canSubmit = trimmed.length >= 2 && selected.size > 0 && !saving;
+  const isDuplicate =
+    trimmed.length >= 2 &&
+    existingNames.some((n) => normalizeName(n) === normalizeName(trimmed));
+  const canSubmit =
+    trimmed.length >= 2 && selected.size > 0 && !saving && !isDuplicate;
 
   const reset = () => {
     setName('');
@@ -111,6 +121,11 @@ export function AddFoodModal({
               maxLength={40}
               textAlign="right"
             />
+            {isDuplicate && (
+              <Text style={styles.errorText}>
+                כבר קיים מאכל בשם הזה ברשימה — אי אפשר להוסיף את אותו מאכל פעמיים
+              </Text>
+            )}
 
             <Text style={styles.label}>
               קטגוריות{selected.size > 0 ? ` (${selected.size})` : ''}
@@ -282,5 +297,13 @@ const styles = StyleSheet.create({
   },
   buttonHalf: {
     flex: 1,
+  },
+  errorText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+    color: colors.warning,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.xs,
   },
 });
