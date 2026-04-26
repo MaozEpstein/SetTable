@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { useToast } from './Toast';
 import { AddFoodToSlotModal } from './AddFoodToSlotModal';
 import { AddMealSlotModal } from './AddMealSlotModal';
 import { AssigneePickerModal } from './AssigneePickerModal';
@@ -17,6 +18,7 @@ import { getHebrewContext } from '../utils/hebrewCalendar';
 import { buildShareText } from '../utils/shareShabbatPlan';
 import { buildMenuSnapshot, encodeSnapshot } from '../utils/buildMenuSnapshot';
 import { PrimaryButton } from './PrimaryButton';
+import { MealRowSkeleton } from './Skeleton';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
   detectEventType,
@@ -42,6 +44,7 @@ type Props = {
 export function MealsTab({ group }: Props) {
   const groupId = group.id;
   const { uid, userName } = useUser();
+  const { showToast } = useToast();
   const [endingShabbat, setEndingShabbat] = useState(false);
   const [sharing, setSharing] = useState(false);
   const { assignments, loading: loadingAssignments } = useAssignments(groupId);
@@ -238,10 +241,7 @@ export function MealsTab({ group }: Props) {
       const encoded = encodeSnapshot(snap);
       const url = `https://settable-97985.web.app/menu.html#${encoded}`;
       await Clipboard.setStringAsync(url);
-      Alert.alert(
-        'הקישור הועתק ✓',
-        'הדבק ב-WhatsApp / אימייל / SMS. כל מי שיפתח את הקישור יראה את התפריט בעיצוב נקי, ללא צורך באפליקציה.',
-      );
+      showToast('קישור התפריט הועתק ללוח');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
       Alert.alert('אופס', `לא הצלחנו ליצור קישור.\n${message}`);
@@ -479,7 +479,13 @@ function AllAssignmentsView({
   onLongPress,
 }: AllViewProps) {
   if (loading) {
-    return <Text style={styles.loadingText}>טוען שיבוצים...</Text>;
+    return (
+      <View>
+        <MealRowSkeleton />
+        <MealRowSkeleton />
+        <MealRowSkeleton />
+      </View>
+    );
   }
 
   return (
@@ -568,16 +574,30 @@ function SingleSlotView({
   if (!slot) {
     return <Text style={styles.loadingText}>סעודה לא נמצאה</Text>;
   }
+  const doneCount = assignments.filter((a) => a.done).length;
+  const total = assignments.length;
+  const progressPct = total > 0 ? doneCount / total : 0;
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
           {slot.emoji} {slot.label}
-          {assignments.length > 0 && (
-            <Text style={styles.count}> · {assignments.length}</Text>
+          {total > 0 && (
+            <Text style={styles.count}> · {doneCount}/{total} מוכנים</Text>
           )}
         </Text>
       </View>
+      {total > 0 && (
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${Math.round(progressPct * 100)}%` },
+              progressPct === 1 && styles.progressFillComplete,
+            ]}
+          />
+        </View>
+      )}
 
       {assignments.length === 0 ? (
         <Text style={styles.emptyText}>אין עדיין מאכלים ששובצו</Text>
@@ -765,6 +785,21 @@ const styles = StyleSheet.create({
   flatList: { gap: spacing.sm },
   section: { gap: spacing.xs },
   sectionHeader: { marginBottom: spacing.xs },
+  progressTrack: {
+    height: 4,
+    backgroundColor: colors.background,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+  },
+  progressFillComplete: {
+    backgroundColor: colors.success,
+  },
   sectionTitle: {
     fontSize: fontSize.md,
     fontFamily: fontFamily.bold,

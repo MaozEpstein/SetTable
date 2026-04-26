@@ -1,58 +1,74 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- cream background -->
+  <defs>
+    <!-- main loaf body: light gold on top → rich brown at bottom (baked look) -->
+    <linearGradient id="loafGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F0BB6F"/>
+      <stop offset="55%" stop-color="#B07434"/>
+      <stop offset="100%" stop-color="#5E3814"/>
+    </linearGradient>
+    <!-- top buttery sheen -->
+    <radialGradient id="sheen" cx="50%" cy="20%" r="55%">
+      <stop offset="0%" stop-color="#FFE4B5" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#FFE4B5" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- cream background (matches app) -->
   <rect width="1024" height="1024" fill="#FBF7F0"/>
 
-  <!-- soft shadow under the loaf -->
-  <ellipse cx="512" cy="760" rx="340" ry="20" fill="#1F2A44" opacity="0.08"/>
+  <!-- ground shadow -->
+  <ellipse cx="512" cy="755" rx="395" ry="22" fill="#1F2A44" opacity="0.18"/>
 
-  <!-- sesame seeds floating above the loaf -->
-  <g fill="#1F2A44" opacity="0.85">
-    <ellipse cx="320" cy="300" rx="8" ry="12" transform="rotate(-25 320 300)"/>
-    <ellipse cx="410" cy="270" rx="8" ry="12" transform="rotate(15 410 270)"/>
-    <ellipse cx="510" cy="258" rx="8" ry="12" transform="rotate(-10 510 258)"/>
-    <ellipse cx="610" cy="270" rx="8" ry="12" transform="rotate(20 610 270)"/>
-    <ellipse cx="700" cy="300" rx="8" ry="12" transform="rotate(-15 700 300)"/>
-  </g>
-
-  <!-- challah outline: rounded oblong loaf -->
+  <!-- main loaf: oblong with rounded ends -->
   <path
-    d="M 232 530
-       Q 232 380, 392 380
-       L 632 380
-       Q 792 380, 792 530
-       Q 792 680, 632 680
-       L 392 680
-       Q 232 680, 232 530 Z"
-    fill="none"
-    stroke="#C9943B"
-    stroke-width="18"
-    stroke-linejoin="round"/>
+    d="M 165 510
+       Q 165 360 360 360
+       L 664 360
+       Q 859 360 859 510
+       Q 859 670 664 670
+       L 360 670
+       Q 165 670 165 510 Z"
+    fill="url(#loafGrad)"
+    stroke="#4A2D11" stroke-width="6" stroke-linejoin="round"/>
 
-  <!-- braid: 3 flowing sine-wave strands interweaving -->
-  <g fill="none" stroke="#C9943B" stroke-width="22" stroke-linecap="round">
-    <!-- top strand: starts low, waves up-down-up-down -->
-    <path d="M 280 510
-             C 360 440, 440 580, 520 510
-             S 680 440, 760 510"
-          opacity="0.95"/>
+  <!-- top highlight (baked sheen) -->
+  <path
+    d="M 165 510
+       Q 165 360 360 360
+       L 664 360
+       Q 859 360 859 510
+       Q 859 670 664 670
+       L 360 670
+       Q 165 670 165 510 Z"
+    fill="url(#sheen)"/>
 
-    <!-- middle strand: phase-shifted, starts high -->
-    <path d="M 280 540
-             C 360 600, 440 460, 520 540
-             S 680 600, 760 540"
-          opacity="0.95"/>
+  <!-- braid grooves: 4 diagonal twists creating the braid pattern -->
+  <g fill="none" stroke="#5E3814" stroke-width="20" stroke-linecap="round" opacity="0.85">
+    <path d="M 285 375 Q 235 510 325 655"/>
+    <path d="M 418 375 Q 368 510 458 655"/>
+    <path d="M 551 375 Q 501 510 591 655"/>
+    <path d="M 684 375 Q 634 510 724 655"/>
   </g>
 
-  <!-- braid "knots" — small accent ovals at each crossing point to imply weaving -->
-  <g fill="#C9943B">
-    <ellipse cx="360" cy="525" rx="10" ry="6" transform="rotate(20 360 525)"/>
-    <ellipse cx="440" cy="525" rx="10" ry="6" transform="rotate(-20 440 525)"/>
-    <ellipse cx="520" cy="525" rx="10" ry="6" transform="rotate(20 520 525)"/>
-    <ellipse cx="600" cy="525" rx="10" ry="6" transform="rotate(-20 600 525)"/>
-    <ellipse cx="680" cy="525" rx="10" ry="6" transform="rotate(20 680 525)"/>
+  <!-- highlight ridges between grooves (the 'raised' part of each braid lobe) -->
+  <g fill="none" stroke="#F2C57E" stroke-width="9" stroke-linecap="round" opacity="0.55">
+    <path d="M 230 405 Q 195 510 280 615"/>
+    <path d="M 350 405 Q 300 510 390 615"/>
+    <path d="M 485 405 Q 435 510 525 615"/>
+    <path d="M 618 405 Q 568 510 658 615"/>
+    <path d="M 760 405 Q 720 510 805 615"/>
   </g>
 
-  <!-- end caps: little rounded bumps suggesting the loaf ends -->
-  <circle cx="232" cy="530" r="14" fill="#C9943B"/>
-  <circle cx="792" cy="530" r="14" fill="#C9943B"/>
+  <!-- sesame seeds scattered on top -->
+  <g fill="#FFFBE8">
+    <ellipse cx="295" cy="435" rx="5" ry="9" transform="rotate(20 295 435)"/>
+    <ellipse cx="380" cy="425" rx="5" ry="9" transform="rotate(-15 380 425)"/>
+    <ellipse cx="455" cy="445" rx="5" ry="9" transform="rotate(25 455 445)"/>
+    <ellipse cx="540" cy="425" rx="5" ry="9" transform="rotate(-10 540 425)"/>
+    <ellipse cx="615" cy="445" rx="5" ry="9" transform="rotate(15 615 445)"/>
+    <ellipse cx="700" cy="430" rx="5" ry="9" transform="rotate(-20 700 430)"/>
+    <ellipse cx="335" cy="480" rx="4" ry="7" transform="rotate(10 335 480)"/>
+    <ellipse cx="495" cy="490" rx="4" ry="7" transform="rotate(-15 495 490)"/>
+    <ellipse cx="650" cy="485" rx="4" ry="7" transform="rotate(20 650 485)"/>
+  </g>
 </svg>

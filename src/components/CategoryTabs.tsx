@@ -1,4 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollArrows } from './ScrollArrows';
+import { useHorizontalTabScroll } from '../hooks/useHorizontalTabScroll';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { CategoryInfo } from '../types';
 
@@ -15,6 +17,8 @@ type Props = {
   onLongPressCategory?: (category: CategoryInfo) => void;
 };
 
+const SCROLL_STEP = 180;
+
 export function CategoryTabs({
   categories,
   active,
@@ -25,12 +29,15 @@ export function CategoryTabs({
   onAddCategory,
   onLongPressCategory,
 }: Props) {
+  const { scrollRef, scrollBy, isWeb } = useHorizontalTabScroll();
+
   return (
     <View style={styles.wrap}>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
+        contentContainerStyle={[styles.row, isWeb && styles.rowWeb]}
       >
         <Pill
           isActive={active === 'all'}
@@ -73,6 +80,13 @@ export function CategoryTabs({
           </Pressable>
         )}
       </ScrollView>
+
+      {isWeb && (
+        <ScrollArrows
+          onPrev={() => scrollBy(-SCROLL_STEP)}
+          onNext={() => scrollBy(SCROLL_STEP)}
+        />
+      )}
     </View>
   );
 }
@@ -117,8 +131,11 @@ const styles = StyleSheet.create({
     padding: 4,
     borderWidth: 1,
     borderColor: colors.border,
+    position: 'relative',
   },
   row: { gap: 4, alignItems: 'center' },
+  // Reserve space on the sides for the arrow buttons on web.
+  rowWeb: { paddingHorizontal: 32 },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',

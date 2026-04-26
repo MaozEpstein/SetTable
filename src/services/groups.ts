@@ -319,6 +319,12 @@ export async function promoteToAdmin(
   });
 }
 
+export async function regenerateInviteCode(groupId: string): Promise<string> {
+  const newCode = await generateUniqueCode();
+  await updateDoc(doc(db, GROUPS, groupId), { code: newCode });
+  return newCode;
+}
+
 export async function updateNameInAllGroups(
   uid: string,
   newName: string,

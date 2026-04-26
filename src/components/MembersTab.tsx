@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
-import * as Sharing from 'expo-sharing';
+import { useToast } from './Toast';
 import { AddManualMemberModal } from './AddManualMemberModal';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
@@ -10,6 +10,7 @@ import {
   kickMember,
   leaveGroup,
   promoteToAdmin,
+  regenerateInviteCode,
   removeManualMember,
 } from '../services/groups';
 import { removeGroupId } from '../storage';
@@ -23,6 +24,7 @@ type Props = {
 export function MembersTab({ group }: Props) {
   const { uid } = useUser();
   const navigation = useNavigation();
+  const { showToast } = useToast();
   const [leaving, setLeaving] = useState(false);
   const [addManualVisible, setAddManualVisible] = useState(false);
 
@@ -129,24 +131,40 @@ export function MembersTab({ group }: Props) {
 
   const handleCopyCode = async () => {
     await Clipboard.setStringAsync(group.code);
-    Alert.alert('הועתק ✓', `הקוד ${group.code} הועתק ללוח.`);
+    showToast(`הקוד ${group.code} הועתק`);
+  };
+
+  const handleRegenerateCode = () => {
+    Alert.alert(
+      'החלפת קוד הזמנה',
+      'הקוד הנוכחי יבוטל ויונפק קוד חדש. מי שעוד לא הצטרף יצטרך לקבל את הקוד החדש.',
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'החלף קוד',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const next = await regenerateInviteCode(group.id);
+              showToast(`קוד חדש: ${next}`);
+            } catch {
+              showToast('לא הצלחנו להחליף קוד', 'error');
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleShareCode = async () => {
     const message = `הוזמנת לקבוצה "${group.name}" ב"שולחן ערוך" 🕯️\n\nקוד הצטרפות: ${group.code}`;
-    const available = await Sharing.isAvailableAsync();
-    if (available) {
-      try {
-        await Clipboard.setStringAsync(message);
-        Alert.alert(
-          'ההזמנה הועתקה ללוח',
-          'ההזמנה הועתקה. הדבק ב-WhatsApp או בכל אפליקציה אחרת.',
-        );
-      } catch {
-        Alert.alert('שיתוף', message);
-      }
-    } else {
-      Alert.alert('הזמנה', message);
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    try {
+      await Linking.openURL(whatsappUrl);
+    } catch {
+      // Fallback if WhatsApp / browser can't open the URL
+      await Clipboard.setStringAsync(message);
+      showToast('ההזמנה הועתקה ללוח', 'info');
     }
   };
 
@@ -172,6 +190,11 @@ export function MembersTab({ group }: Props) {
             />
           </View>
         </View>
+        {iAmAdmin && (
+          <Pressable onPress={handleRegenerateCode} hitSlop={6}>
+            <Text style={styles.regenLink}>🔄 החלף קוד הזמנה</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.membersSection}>
@@ -404,6 +427,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.pill,
+  },
+  regenLink: {
+    textAlign: 'center',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bold,
+    color: colors.primary,
+    paddingVertical: spacing.xs,
+    writingDirection: 'rtl',
   },
   adminTag: {
     fontSize: fontSize.xs,

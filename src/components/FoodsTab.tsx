@@ -6,6 +6,7 @@ import { AddCategoryModal } from './AddCategoryModal';
 import { AddFoodModal } from './AddFoodModal';
 import { CategoryTabs, type CategorySubTab } from './CategoryTabs';
 import { PrimaryButton } from './PrimaryButton';
+import { FoodCardSkeleton } from './Skeleton';
 import { useFoods } from '../hooks/useFoods';
 import { removeCustomCategory } from '../services/groups';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
@@ -95,8 +96,11 @@ export function FoodsTab({ group }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyText}>טוען מאכלים...</Text>
+      <View>
+        <FoodCardSkeleton />
+        <FoodCardSkeleton />
+        <FoodCardSkeleton />
+        <FoodCardSkeleton />
       </View>
     );
   }

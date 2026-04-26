@@ -10,6 +10,7 @@ import {
   Heebo_700Bold,
   useFonts,
 } from '@expo-google-fonts/heebo';
+import { ToastProvider } from './src/components/Toast';
 import { WebFrame } from './src/components/WebFrame';
 import { UserProvider, type AuthMethod } from './src/context/UserContext';
 import { auth, isFirebaseConfigured } from './src/firebase';
@@ -132,17 +133,19 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <WebFrame>
-        <UserProvider
-          uid={authUser.uid}
-          userName={displayName}
-          username={profile?.username}
-          email={profile?.email}
-          authMethod={authMethod}
-          setUserName={handleSetUserName}
-          signOut={handleSignOut}
-        >
-          <RootNavigator />
-        </UserProvider>
+        <ToastProvider>
+          <UserProvider
+            uid={authUser.uid}
+            userName={displayName}
+            username={profile?.username}
+            email={profile?.email}
+            authMethod={authMethod}
+            setUserName={handleSetUserName}
+            signOut={handleSignOut}
+          >
+            <RootNavigator />
+          </UserProvider>
+        </ToastProvider>
       </WebFrame>
     </SafeAreaProvider>
   );

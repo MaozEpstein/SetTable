@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -12,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -215,6 +217,36 @@ export function FoodDetailScreen({
       Alert.alert('אופס', `לא הצלחנו לשבץ.\n${message}`);
     } finally {
       setAddingToSlot(false);
+    }
+  };
+
+  const handleShareFood = async () => {
+    const lines: string[] = [];
+    lines.push(`🍽️ ${food.name}`);
+    lines.push('');
+    if (food.recipe?.trim()) {
+      lines.push('📝 מתכון:');
+      lines.push(food.recipe.trim());
+      lines.push('');
+    }
+    if (food.notes?.trim()) {
+      lines.push('💭 הערות:');
+      lines.push(food.notes.trim());
+      lines.push('');
+    }
+    const firstImage = food.images?.[0];
+    if (firstImage) {
+      lines.push(`📷 תמונה: ${firstImage}`);
+      lines.push('');
+    }
+    lines.push('— נשלח מ"שולחן ערוך" 🕯️');
+    const text = lines.join('\n');
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      await Clipboard.setStringAsync(text);
+      Alert.alert('הועתק', 'הפרטים הועתקו ללוח. הדבק ב-WhatsApp.');
     }
   };
 
@@ -473,6 +505,13 @@ export function FoodDetailScreen({
                 icon="+"
                 onPress={() => setSlotPickerOpen(true)}
                 loading={addingToSlot}
+              />
+              <View style={{ height: 8 }} />
+              <PrimaryButton
+                label="שתף בוואטסאפ"
+                icon="📤"
+                variant="outline"
+                onPress={handleShareFood}
               />
             </View>
           )}

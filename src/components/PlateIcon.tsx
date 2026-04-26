@@ -1,10 +1,18 @@
 import { View } from 'react-native';
-import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
+import Svg, {
+  Defs,
+  Ellipse,
+  G,
+  LinearGradient,
+  Path,
+  RadialGradient,
+  Stop,
+} from 'react-native-svg';
 import { colors } from '../theme';
 
 type Props = {
   size?: number;
-  // 'filled' = full color challah; 'empty' = grey outline (used in empty states)
+  // 'filled' = baked golden challah; 'empty' = grey outline (used in empty states)
   state?: 'filled' | 'empty';
   background?: 'cream' | 'transparent';
 };
@@ -16,8 +24,7 @@ export function PlateIcon({
   state = 'filled',
   background = 'transparent',
 }: Props) {
-  const main = state === 'empty' ? '#C9C2B0' : colors.primary;
-  const seed = state === 'empty' ? '#C9C2B0' : '#1F2A44';
+  const isEmpty = state === 'empty';
 
   return (
     <View
@@ -31,42 +38,81 @@ export function PlateIcon({
       }}
     >
       <Svg width={size} height={size} viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}>
-        {/* sesame seeds */}
-        <G fill={seed} opacity={0.85}>
-          <Ellipse cx={32} cy={28} rx={1} ry={1.4} />
-          <Ellipse cx={42} cy={25} rx={1} ry={1.4} />
-          <Ellipse cx={50} cy={24} rx={1} ry={1.4} />
-          <Ellipse cx={58} cy={25} rx={1} ry={1.4} />
-          <Ellipse cx={68} cy={28} rx={1} ry={1.4} />
-        </G>
+        <Defs>
+          <LinearGradient id="loaf" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={isEmpty ? '#D9D3C4' : '#F0BB6F'} />
+            <Stop offset="0.55" stopColor={isEmpty ? '#B5AE9D' : '#B07434'} />
+            <Stop offset="1" stopColor={isEmpty ? '#8C8678' : '#5E3814'} />
+          </LinearGradient>
+          <RadialGradient id="sheen" cx="50%" cy="20%" rx="55%" ry="55%">
+            <Stop offset="0" stopColor="#FFE4B5" stopOpacity={isEmpty ? 0 : 0.6} />
+            <Stop offset="1" stopColor="#FFE4B5" stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
 
-        {/* loaf outline */}
+        {/* ground shadow */}
+        <Ellipse cx={50} cy={73} rx={38} ry={2} fill="#1F2A44" opacity={0.16} />
+
+        {/* main loaf body */}
         <Path
-          d="M 22 52 Q 22 37 38 37 L 62 37 Q 78 37 78 52 Q 78 67 62 67 L 38 67 Q 22 67 22 52 Z"
-          fill="none"
-          stroke={main}
-          strokeWidth={2}
+          d="M 16 50 Q 16 36 35 36 L 65 36 Q 84 36 84 50 Q 84 66 65 66 L 35 66 Q 16 66 16 50 Z"
+          fill="url(#loaf)"
+          stroke={isEmpty ? '#7A7466' : '#4A2D11'}
+          strokeWidth={0.7}
           strokeLinejoin="round"
         />
 
-        {/* braid strands */}
-        <G fill="none" stroke={main} strokeWidth={2.4} strokeLinecap="round">
-          <Path d="M 28 50 C 36 43, 44 57, 52 50 S 68 43, 76 50" opacity={0.95} />
-          <Path d="M 28 53 C 36 60, 44 46, 52 53 S 68 60, 76 53" opacity={0.95} />
+        {/* sheen on top */}
+        <Path
+          d="M 16 50 Q 16 36 35 36 L 65 36 Q 84 36 84 50 Q 84 66 65 66 L 35 66 Q 16 66 16 50 Z"
+          fill="url(#sheen)"
+        />
+
+        {/* braid grooves — 4 diagonal twists */}
+        <G
+          fill="none"
+          stroke={isEmpty ? '#7A7466' : '#5E3814'}
+          strokeWidth={2}
+          strokeLinecap="round"
+          opacity={0.85}
+        >
+          <Path d="M 28 37 Q 23 50 32 64" />
+          <Path d="M 41 37 Q 36 50 45 64" />
+          <Path d="M 54 37 Q 49 50 58 64" />
+          <Path d="M 67 37 Q 62 50 71 64" />
         </G>
 
-        {/* knot accents */}
-        <G fill={main}>
-          <Ellipse cx={36} cy={51.5} rx={1.2} ry={0.7} />
-          <Ellipse cx={44} cy={51.5} rx={1.2} ry={0.7} />
-          <Ellipse cx={52} cy={51.5} rx={1.2} ry={0.7} />
-          <Ellipse cx={60} cy={51.5} rx={1.2} ry={0.7} />
-          <Ellipse cx={68} cy={51.5} rx={1.2} ry={0.7} />
-        </G>
+        {/* highlight ridges between grooves */}
+        {!isEmpty && (
+          <G
+            fill="none"
+            stroke="#F2C57E"
+            strokeWidth={0.9}
+            strokeLinecap="round"
+            opacity={0.55}
+          >
+            <Path d="M 22 40 Q 19 50 27 60" />
+            <Path d="M 34 40 Q 29 50 38 60" />
+            <Path d="M 47 40 Q 42 50 51 60" />
+            <Path d="M 60 40 Q 55 50 64 60" />
+            <Path d="M 74 40 Q 70 50 78 60" />
+          </G>
+        )}
 
-        {/* end caps */}
-        <Circle cx={22} cy={52} r={1.8} fill={main} />
-        <Circle cx={78} cy={52} r={1.8} fill={main} />
+        {/* sesame seeds */}
+        {!isEmpty && (
+          <G fill="#FFFBE8">
+            <Ellipse cx={29} cy={43} rx={0.5} ry={0.9} />
+            <Ellipse cx={37} cy={42} rx={0.5} ry={0.9} />
+            <Ellipse cx={45} cy={44} rx={0.5} ry={0.9} />
+            <Ellipse cx={53} cy={42} rx={0.5} ry={0.9} />
+            <Ellipse cx={61} cy={44} rx={0.5} ry={0.9} />
+            <Ellipse cx={69} cy={42} rx={0.5} ry={0.9} />
+            <Ellipse cx={33} cy={48} rx={0.4} ry={0.7} />
+            <Ellipse cx={49} cy={48} rx={0.4} ry={0.7} />
+            <Ellipse cx={64} cy={48} rx={0.4} ry={0.7} />
+          </G>
+        )}
       </Svg>
     </View>
   );

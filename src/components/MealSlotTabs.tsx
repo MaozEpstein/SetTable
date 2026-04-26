@@ -1,6 +1,10 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollArrows } from './ScrollArrows';
+import { useHorizontalTabScroll } from '../hooks/useHorizontalTabScroll';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { SlotInfo } from '../types';
+
+const SCROLL_STEP = 180;
 
 export type MealSubTab = 'all' | string;
 
@@ -23,12 +27,14 @@ export function MealSlotTabs({
   onAddSlot,
   onLongPressSlot,
 }: Props) {
+  const { scrollRef, scrollBy, isWeb } = useHorizontalTabScroll();
   return (
     <View style={styles.wrap}>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
+        contentContainerStyle={[styles.row, isWeb && styles.rowWeb]}
       >
         <SlotPill
           isActive={active === 'all'}
@@ -62,6 +68,12 @@ export function MealSlotTabs({
           </Pressable>
         )}
       </ScrollView>
+      {isWeb && (
+        <ScrollArrows
+          onPrev={() => scrollBy(-SCROLL_STEP)}
+          onNext={() => scrollBy(SCROLL_STEP)}
+        />
+      )}
     </View>
   );
 }
@@ -106,11 +118,13 @@ const styles = StyleSheet.create({
     padding: 4,
     borderWidth: 1,
     borderColor: colors.border,
+    position: 'relative',
   },
   row: {
     gap: 4,
     alignItems: 'center',
   },
+  rowWeb: { paddingHorizontal: 32 },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
