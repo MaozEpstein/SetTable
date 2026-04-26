@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { PlateIcon } from '../components/PlateIcon';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { isUsernameAvailable, registerWithUsername } from '../services/userAuth';
+import { translateAuthError } from '../utils/authErrors';
 import {
   validateEmail,
   validatePassword,
@@ -70,8 +71,7 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
       });
       // onAuthStateChanged elsewhere will pick up the new user.
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'הרשמה נכשלה';
-      Alert.alert('אופס', msg);
+      Alert.alert('אופס', translateAuthError(err));
     } finally {
       setBusy(false);
     }

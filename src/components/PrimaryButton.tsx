@@ -1,5 +1,8 @@
+import { useRef } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
+
+const DOUBLE_TAP_GUARD_MS = 500;
 
 type Variant = 'primary' | 'secondary' | 'outline';
 
@@ -23,6 +26,16 @@ export function PrimaryButton({
   fullWidth = true,
 }: Props) {
   const isDisabled = disabled || loading;
+  const lastTapRef = useRef(0);
+
+  // Even when callers forget to disable the button while their async
+  // handler runs, two presses within 500ms are coalesced into one.
+  const guardedPress = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < DOUBLE_TAP_GUARD_MS) return;
+    lastTapRef.current = now;
+    onPress();
+  };
   const backgroundColor =
     variant === 'primary'
       ? colors.primary
@@ -34,7 +47,7 @@ export function PrimaryButton({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={guardedPress}
       disabled={isDisabled}
       style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.button,

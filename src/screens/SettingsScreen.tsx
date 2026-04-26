@@ -16,6 +16,8 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useUser } from '../context/UserContext';
 import { updateNameInAllGroups } from '../services/groups';
+import { deleteCurrentUserAccount } from '../services/userAuth';
+import { translateAuthError } from '../utils/authErrors';
 import { setUserName as persistUserName } from '../storage';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { RootStackScreenProps } from '../navigation/types';
@@ -53,6 +55,51 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'מחיקת חשבון',
+      'האם אתה בטוח שברצונך למחוק את החשבון שלך לצמיתות?\n\nהקבוצות שיצרת יישמרו ויישארו פעילות עבור שאר החברים — רק אתה תוסר מהן. שם המשתמש שלך ישוחרר וניתן יהיה לרשום אותו מחדש.\n\nפעולה זו לא ניתנת לביטול.',
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'מחק לצמיתות',
+          style: 'destructive',
+          onPress: () => confirmDeleteAccount(),
+        },
+      ],
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'אישור אחרון',
+      'מחיקת החשבון לא ניתנת לביטול. ללחוץ "מחק" כדי לאשר.',
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'מחק',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCurrentUserAccount();
+              // onAuthStateChanged יחזיר אותנו אוטומטית למסך הכניסה
+            } catch (err) {
+              const code = (err as { code?: string }).code;
+              if (code === 'auth/requires-recent-login') {
+                Alert.alert(
+                  'דרושה התחברות מחדש',
+                  'מטעמי אבטחה — התנתק והתחבר שוב, ואז נסה למחוק.',
+                );
+              } else {
+                Alert.alert('אופס', translateAuthError(err));
+              }
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleSignOut = () => {
@@ -182,6 +229,17 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
                   : 'יסיים את ההפעלה. תוכל להיכנס שוב עם הפרטים שלך.'}
               </Text>
             </Pressable>
+            {authMethod !== 'anonymous' && (
+              <Pressable
+                onPress={handleDeleteAccount}
+                style={({ pressed }) => [styles.deleteCard, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={styles.deleteTitle}>🗑️ מחק חשבון לצמיתות</Text>
+                <Text style={styles.deleteHelper}>
+                  הקבוצות יישארו פעילות לשאר החברים — רק אתה תוסר מהן.
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -338,6 +396,29 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: fontFamily.regular,
     color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  deleteCard: {
+    backgroundColor: '#FBE6DC',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1.5,
+    borderColor: '#C97D5D',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  deleteTitle: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.bold,
+    color: '#9B4A30',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  deleteHelper: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
+    color: '#7A3A24',
     textAlign: 'right',
     writingDirection: 'rtl',
   },

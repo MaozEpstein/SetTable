@@ -10,12 +10,19 @@ import {
   type User,
 } from 'firebase/auth';
 import {
+  arrayRemove as arrayRemoveSentinel,
+  collection,
+  deleteDoc,
+  deleteField as deleteFieldSentinel,
   doc,
   getDoc,
+  getDocs,
+  query,
   runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { normalizeUsername } from '../utils/usernameValidation';
@@ -246,4 +253,58 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
 export async function signOutUser(): Promise<void> {
   await signOut(auth);
+}
+
+// ----- Delete account -----
+//
+// Removes the current user from Firebase Auth and cleans up their Firestore
+// records. **Does not delete groups** — only removes the user as a member.
+// Other group members keep their groups intact.
+export async function deleteCurrentUserAccount(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('אין משתמש פעיל');
+  const uid = user.uid;
+
+  // 1. Read profile to find the username (if any) so we can free it.
+  const profileSnap = await getDoc(doc(db, USER_PROFILES, uid));
+  const profile = profileSnap.exists() ? (profileSnap.data() as UserProfile) : null;
+
+  // 2. Remove the user from every group they're a member of.
+  const myGroups = await getDocs(
+    query(collection(db, 'groups'), where('memberUids', 'array-contains', uid)),
+  );
+  for (const g of myGroups.docs) {
+    await updateDoc(g.ref, {
+      [`members.${uid}`]: deleteFieldSentinel(),
+      memberUids: arrayRemoveSentinel(uid),
+      admins: arrayRemoveSentinel(uid),
+    });
+  }
+
+  // 3. Free the username (if user registered with one).
+  if (profile?.username) {
+    try {
+      await deleteDoc(doc(db, USERNAMES, profile.username));
+    } catch {
+      // best-effort
+    }
+  }
+
+  // 4. Delete the userProfile document.
+  try {
+    await deleteDoc(doc(db, USER_PROFILES, uid));
+  } catch {
+    // best-effort
+  }
+
+  // 5. Delete push token if exists.
+  try {
+    await deleteDoc(doc(db, 'pushTokens', uid));
+  } catch {
+    // best-effort
+  }
+
+  // 6. Delete the Firebase Auth user. This may fail with auth/requires-recent-login
+  // if the session is too old — caller should handle that and prompt re-auth.
+  await user.delete();
 }

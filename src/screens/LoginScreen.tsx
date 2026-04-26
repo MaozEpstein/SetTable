@@ -21,6 +21,7 @@ import {
   sendPasswordResetByUsername,
   signInWithUsername,
 } from '../services/userAuth';
+import { translateAuthError } from '../utils/authErrors';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 
 type Mode = 'choose' | 'username';
@@ -48,8 +49,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
     try {
       await google.promptAsync();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'התחברות נכשלה';
-      Alert.alert('Google Sign-In', msg);
+      Alert.alert('Google Sign-In', translateAuthError(err));
     }
   };
 
@@ -64,8 +64,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
       await signInWithUsername(u, password);
       // onAuthStateChanged elsewhere will pick this up.
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'התחברות נכשלה';
-      Alert.alert('אופס', msg);
+      Alert.alert('אופס', translateAuthError(err));
     } finally {
       setBusy(false);
     }
@@ -84,8 +83,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
         `שלחנו קישור לאיפוס סיסמה לכתובת ${masked}.\nבדוק את תיבת הדואר.`,
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'שליחה נכשלה';
-      Alert.alert('אופס', msg);
+      Alert.alert('אופס', translateAuthError(err));
     }
   };
 

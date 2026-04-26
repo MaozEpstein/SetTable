@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { isUsernameAvailable, linkAnonymousAccount } from '../services/userAuth';
+import { translateAuthError } from '../utils/authErrors';
 import {
   validateEmail,
   validatePassword,
@@ -53,8 +54,7 @@ export function LinkAccountScreen({ onDone, onCancel }: Props) {
       Alert.alert('הצמדה הושלמה ✓', 'מעתה תוכל להיכנס מכל מכשיר עם שם המשתמש והסיסמה.');
       onDone();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'הצמדה נכשלה';
-      Alert.alert('אופס', msg);
+      Alert.alert('אופס', translateAuthError(err));
     } finally {
       setBusy(false);
     }
