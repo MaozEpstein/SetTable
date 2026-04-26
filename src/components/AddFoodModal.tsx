@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
-import { createFood } from '../services/foods';
+import { createFood, DuplicateFoodNameError } from '../services/foods';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { CategoryInfo, FoodCategory } from '../types';
 
@@ -85,8 +85,12 @@ export function AddFoodModal({
       onClose();
       onCreated?.(newId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו להוסיף את המאכל.\n${message}`);
+      if (err instanceof DuplicateFoodNameError) {
+        Alert.alert('כפילות', err.message);
+      } else {
+        const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
+        Alert.alert('אופס', `לא הצלחנו להוסיף את המאכל.\n${message}`);
+      }
     } finally {
       setSaving(false);
     }

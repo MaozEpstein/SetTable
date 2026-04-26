@@ -67,6 +67,17 @@ export function FoodsTab({ group }: Props) {
     [filteredFoods],
   );
 
+  const favoritesByCategory = useMemo(() => {
+    const map = new Map<string, Food[]>();
+    for (const cat of categories) map.set(cat.key, []);
+    for (const food of favorites) {
+      for (const c of getFoodCategories(food)) {
+        map.get(c)?.push(food);
+      }
+    }
+    return map;
+  }, [favorites, categories]);
+
   const handleOpenFood = (food: Food) => {
     navigation.navigate('FoodDetail', { groupId, foodId: food.id });
   };
@@ -188,19 +199,25 @@ export function FoodsTab({ group }: Props) {
             </Text>
           </View>
         ) : (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              ⭐ מועדפים
-              <Text style={styles.count}> · {favorites.length}</Text>
-            </Text>
-            {favorites.map((food) => (
-              <FoodRow
-                key={food.id}
-                food={food}
-                onPress={() => handleOpenFood(food)}
-              />
-            ))}
-          </View>
+          categories.map((cat) => {
+            const items = favoritesByCategory.get(cat.key) ?? [];
+            if (items.length === 0) return null;
+            return (
+              <View key={cat.key} style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  {cat.emoji} {cat.label}
+                  <Text style={styles.count}> · {items.length}</Text>
+                </Text>
+                {items.map((food) => (
+                  <FoodRow
+                    key={food.id}
+                    food={food}
+                    onPress={() => handleOpenFood(food)}
+                  />
+                ))}
+              </View>
+            );
+          })
         )
       ) : (
         sectionsToShow.map((cat) => {

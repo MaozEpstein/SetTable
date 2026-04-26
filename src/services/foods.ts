@@ -1,12 +1,13 @@
 import {
-  addDoc,
   arrayRemove,
   arrayUnion,
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   query,
+  runTransaction,
   updateDoc,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -22,6 +23,30 @@ function foodDoc(groupId: string, foodId: string) {
   return doc(db, 'groups', groupId, 'foods', foodId);
 }
 
+// Marker doc keyed by normalized name — gives us atomic uniqueness
+// in a Firestore transaction (transactions can't run queries).
+function foodNameMarker(groupId: string, normalizedName: string) {
+  return doc(db, 'groups', groupId, 'foodNames', normalizedName);
+}
+
+function normalizeFoodName(name: string): string {
+  // Doc IDs can't contain '/', and shouldn't be '.' / '..'. Replace those
+  // and collapse whitespace so "חמין" and " חמין " collide.
+  return name
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .replace(/[\/.]/g, '_')
+    .slice(0, 200);
+}
+
+export class DuplicateFoodNameError extends Error {
+  constructor(name: string) {
+    super(`כבר קיים מאכל בשם "${name}" בקבוצה`);
+    this.name = 'DuplicateFoodNameError';
+  }
+}
+
 type CreateFoodInput = {
   groupId: string;
   name: string;
@@ -35,15 +60,30 @@ export async function createFood({
   categories,
   uid,
 }: CreateFoodInput): Promise<string> {
-  const ref = await addDoc(foodsCol(groupId), {
-    name: name.trim(),
-    categories,
-    images: [],
-    isFavorite: false,
-    createdBy: uid,
-    createdAt: Date.now(),
+  const trimmed = name.trim();
+  const normalized = normalizeFoodName(trimmed);
+  const newFoodRef = doc(foodsCol(groupId));
+  const markerRef = foodNameMarker(groupId, normalized);
+
+  await runTransaction(db, async (tx) => {
+    const existing = await tx.get(markerRef);
+    if (existing.exists()) {
+      throw new DuplicateFoodNameError(trimmed);
+    }
+    tx.set(newFoodRef, {
+      name: trimmed,
+      categories,
+      images: [],
+      isFavorite: false,
+      createdBy: uid,
+      createdAt: Date.now(),
+    });
+    tx.set(markerRef, {
+      foodId: newFoodRef.id,
+      name: trimmed,
+    });
   });
-  return ref.id;
+  return newFoodRef.id;
 }
 
 type UpdateFoodInput = {
@@ -79,7 +119,14 @@ export async function deleteFood(groupId: string, foodId: string): Promise<void>
   // (deletion needs a signed request that requires our API secret).
   // Orphaned assets stay in Cloudinary; for a family-scale app the
   // 25 GB free tier absorbs this comfortably.
-  await deleteDoc(foodDoc(groupId, foodId));
+  const ref = foodDoc(groupId, foodId);
+  const snap = await getDoc(ref);
+  const name = snap.exists() ? (snap.data() as Food).name : null;
+  await deleteDoc(ref);
+  if (name) {
+    // Release the uniqueness marker so the name can be reused.
+    await deleteDoc(foodNameMarker(groupId, normalizeFoodName(name))).catch(() => {});
+  }
 }
 
 export async function addImageToFood(
