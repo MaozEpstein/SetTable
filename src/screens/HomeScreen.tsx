@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { PlateIcon } from '../components/PlateIcon';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useUser } from '../context/UserContext';
 import { useGroups } from '../hooks/useGroups';
@@ -47,7 +48,10 @@ export function HomeScreen({ navigation }: RootStackScreenProps<'Home'>) {
             </View>
           ) : groups.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyEmoji}>🍽️</Text>
+              <PlateIcon
+                size={88}
+                sectors={{ meat: 'empty', fish: 'empty', salad: 'empty' }}
+              />
               <Text style={styles.emptyTitle}>עוד אין קבוצות</Text>
               <Text style={styles.emptyText}>
                 צרו קבוצה חדשה והזמינו את המשפחה והחברים,

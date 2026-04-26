@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { AddFoodToSlotModal } from './AddFoodToSlotModal';
 import { AddMealSlotModal } from './AddMealSlotModal';
 import { AssigneePickerModal } from './AssigneePickerModal';
@@ -14,6 +15,7 @@ import { removeCustomSlot } from '../services/groups';
 import { archiveAndClearAssignments } from '../services/history';
 import { getHebrewContext } from '../utils/hebrewCalendar';
 import { buildShareText } from '../utils/shareShabbatPlan';
+import { buildMenuSnapshot, encodeSnapshot } from '../utils/buildMenuSnapshot';
 import { PrimaryButton } from './PrimaryButton';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
@@ -216,6 +218,36 @@ export function MealsTab({ group }: Props) {
     }
   };
 
+  const handleShareLink = async () => {
+    if (assignments.length === 0) {
+      Alert.alert(
+        'אין תכנון לשתף',
+        'הוסף מאכלים לארוחות לפני שתשתף את התכנון.',
+      );
+      return;
+    }
+    try {
+      const snap = buildMenuSnapshot({
+        group,
+        assignments,
+        foodsById,
+        slotByKey,
+        assigneeById,
+        slots,
+      });
+      const encoded = encodeSnapshot(snap);
+      const url = `https://settable-97985.web.app/menu.html#${encoded}`;
+      await Clipboard.setStringAsync(url);
+      Alert.alert(
+        'הקישור הועתק ✓',
+        'הדבק ב-WhatsApp / אימייל / SMS. כל מי שיפתח את הקישור יראה את התפריט בעיצוב נקי, ללא צורך באפליקציה.',
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
+      Alert.alert('אופס', `לא הצלחנו ליצור קישור.\n${message}`);
+    }
+  };
+
   const handleEndShabbat = () => {
     if (assignments.length === 0) {
       Alert.alert(
@@ -391,6 +423,16 @@ export function MealsTab({ group }: Props) {
             />
             <Text style={styles.endShabbatHint}>
               ייפתח חלון שיתוף — בחר WhatsApp או כל אפליקציה אחרת
+            </Text>
+          </View>
+          <View style={styles.shareSection}>
+            <PrimaryButton
+              label="🔗 העתק קישור לתפריט"
+              variant="outline"
+              onPress={handleShareLink}
+            />
+            <Text style={styles.endShabbatHint}>
+              קישור לדף-קריאה יפה לאלה שלא משתמשים באפליקציה
             </Text>
           </View>
           <View style={styles.endShabbatSection}>

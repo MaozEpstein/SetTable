@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { PlateIcon } from '../components/PlateIcon';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { setUserName } from '../storage';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
@@ -47,7 +48,7 @@ export function OnboardingScreen({ onComplete }: Props) {
         >
           <View style={styles.container}>
             <View style={styles.header}>
-              <Text style={styles.candle}>🕯️</Text>
+              <PlateIcon size={120} />
               <Text style={styles.title}>שולחן ערוך</Text>
               <Text style={styles.subtitle}>תכנון ארוחות שבת משותפות</Text>
             </View>

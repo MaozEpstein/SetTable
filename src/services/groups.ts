@@ -78,6 +78,7 @@ export async function createGroup({
     createdAtServer: serverTimestamp(),
     members: { [uid]: member },
     memberUids: [uid],
+    admins: [uid],
   });
 
   return { id: ref.id, code };
@@ -294,6 +295,27 @@ export async function leaveGroup(groupId: string, uid: string): Promise<void> {
   await updateDoc(doc(db, GROUPS, groupId), {
     [`members.${uid}`]: deleteField(),
     memberUids: arrayRemove(uid),
+    admins: arrayRemove(uid),
+  });
+}
+
+export async function kickMember(
+  groupId: string,
+  targetUid: string,
+): Promise<void> {
+  await updateDoc(doc(db, GROUPS, groupId), {
+    [`members.${targetUid}`]: deleteField(),
+    memberUids: arrayRemove(targetUid),
+    admins: arrayRemove(targetUid),
+  });
+}
+
+export async function promoteToAdmin(
+  groupId: string,
+  targetUid: string,
+): Promise<void> {
+  await updateDoc(doc(db, GROUPS, groupId), {
+    admins: arrayUnion(targetUid),
   });
 }
 

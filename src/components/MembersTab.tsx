@@ -6,10 +6,15 @@ import * as Sharing from 'expo-sharing';
 import { AddManualMemberModal } from './AddManualMemberModal';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
-import { leaveGroup, removeManualMember } from '../services/groups';
+import {
+  kickMember,
+  leaveGroup,
+  promoteToAdmin,
+  removeManualMember,
+} from '../services/groups';
 import { removeGroupId } from '../storage';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
-import type { Group, ManualMember } from '../types';
+import { isGroupAdmin, type Group, type ManualMember, type Member } from '../types';
 
 type Props = {
   group: Group;
@@ -24,6 +29,54 @@ export function MembersTab({ group }: Props) {
   const members = Object.values(group.members ?? {}).sort(
     (a, b) => a.joinedAt - b.joinedAt,
   );
+  const iAmAdmin = isGroupAdmin(group, uid);
+
+  const handleMemberLongPress = (member: Member) => {
+    if (!iAmAdmin) return;
+    if (member.uid === uid) return;
+    const targetIsAdmin = isGroupAdmin(group, member.uid);
+    const buttons: { text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }[] = [];
+    if (!targetIsAdmin) {
+      buttons.push({
+        text: 'הפוך למנהל',
+        onPress: async () => {
+          try {
+            await promoteToAdmin(group.id, member.uid);
+          } catch {
+            Alert.alert('אופס', 'לא הצלחנו לעדכן הרשאות. נסה שוב.');
+          }
+        },
+      });
+    }
+    buttons.push({
+      text: 'הוצא מהקבוצה',
+      style: 'destructive',
+      onPress: () => confirmKick(member),
+    });
+    buttons.push({ text: 'ביטול', style: 'cancel' });
+    Alert.alert(member.name, targetIsAdmin ? 'משתתף זה כבר מנהל.' : 'בחר פעולה:', buttons);
+  };
+
+  const confirmKick = (member: Member) => {
+    Alert.alert(
+      `הוצאת ${member.name}`,
+      'האם אתה בטוח שאתה רוצה להוציא את המשתתף מהקבוצה?',
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'הוצא',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await kickMember(group.id, member.uid);
+            } catch {
+              Alert.alert('אופס', 'לא הצלחנו להוציא את המשתתף. נסה שוב.');
+            }
+          },
+        },
+      ],
+    );
+  };
   const manualMembers = (group.manualMembers ?? []).slice().sort(
     (a, b) => a.addedAt - b.addedAt,
   );
@@ -123,15 +176,32 @@ export function MembersTab({ group }: Props) {
 
       <View style={styles.membersSection}>
         <Text style={styles.sectionTitle}>חברי הקבוצה ({members.length})</Text>
-        {members.map((m) => (
-          <View key={m.uid} style={styles.memberRow}>
-            <View style={[styles.avatar, m.uid === uid && styles.avatarMe]}>
-              <Text style={styles.avatarText}>{m.name.charAt(0)}</Text>
-            </View>
-            <Text style={styles.memberName}>{m.name}</Text>
-            {m.uid === uid && <Text style={styles.youTag}>אני</Text>}
-          </View>
-        ))}
+        {members.map((m) => {
+          const memberIsAdmin = isGroupAdmin(group, m.uid);
+          const canLongPress = iAmAdmin && m.uid !== uid;
+          return (
+            <Pressable
+              key={m.uid}
+              onLongPress={canLongPress ? () => handleMemberLongPress(m) : undefined}
+              style={({ pressed }) => [
+                styles.memberRow,
+                canLongPress && pressed ? { opacity: 0.7 } : null,
+              ]}
+            >
+              <View style={[styles.avatar, m.uid === uid && styles.avatarMe]}>
+                <Text style={styles.avatarText}>{m.name.charAt(0)}</Text>
+              </View>
+              <Text style={styles.memberName}>{m.name}</Text>
+              {memberIsAdmin && <Text style={styles.adminTag}>מנהל</Text>}
+              {m.uid === uid && <Text style={styles.youTag}>אני</Text>}
+            </Pressable>
+          );
+        })}
+        {iAmAdmin && members.length > 1 && (
+          <Text style={styles.helperText}>
+            לחיצה ארוכה על משתתף → הוצאה מהקבוצה / הפיכה למנהל
+          </Text>
+        )}
       </View>
 
       <View style={styles.membersSection}>
@@ -331,6 +401,15 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     color: colors.primary,
     backgroundColor: '#FBEFD9',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  adminTag: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.bold,
+    color: colors.secondary,
+    backgroundColor: '#DEEAEE',
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.pill,

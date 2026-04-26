@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#C9943B">
+  <title>תכנון שבת · שולחן ערוך</title>
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
+
+    :root {
+      --bg: #FBF7F0;
+      --frame: #E8E2D4;
+      --surface: #FFFFFF;
+      --text: #1F2A44;
+      --muted: #6B7280;
+      --primary: #C9943B;
+      --secondary: #5B8E9A;
+      --success: #7A9D54;
+      --border: #E5DFD0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Heebo', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--frame);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      padding: 0;
+    }
+    .page {
+      max-width: 560px;
+      margin: 0 auto;
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 24px 20px 40px;
+    }
+    @media (min-width: 600px) {
+      .page {
+        margin: 24px auto;
+        min-height: auto;
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+      }
+    }
+    header {
+      text-align: center;
+      padding: 12px 0 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .brand {
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .event {
+      font-size: 17px;
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .dates {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    section {
+      margin-bottom: 22px;
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .slot-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    ul { list-style: none; }
+    li {
+      display: flex;
+      align-items: flex-start;
+      padding: 8px 0;
+      gap: 10px;
+      border-bottom: 1px dashed var(--border);
+    }
+    li:last-child { border-bottom: none; }
+    .mark {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 1px;
+    }
+    .mark.done { background: var(--success); color: white; }
+    .mark.pending { background: var(--bg); color: var(--muted); border: 1.5px solid var(--border); }
+    .item-body { flex: 1; min-width: 0; }
+    .food { font-size: 15px; font-weight: 500; color: var(--text); }
+    .assignee {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .assignee.unassigned { color: var(--primary); font-weight: 500; }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    footer {
+      text-align: center;
+      margin-top: 28px;
+      padding: 18px 12px 4px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .error {
+      background: #FBE6DC;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      color: #C97D5D;
+    }
+    @media print {
+      body { background: white; }
+      .page { box-shadow: none; margin: 0; }
+      footer a { color: var(--text); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page" id="root">
+    <div class="empty">טוען…</div>
+  </div>
+
+  <script>
+    function decodeFragment() {
+      const hash = location.hash.replace(/^#/, '');
+      if (!hash) return null;
+      try {
+        let b64 = hash.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const json = decodeURIComponent(escape(atob(b64)));
+        return JSON.parse(json);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function render(snapshot) {
+      const root = document.getElementById('root');
+      if (!snapshot || snapshot.v !== 1) {
+        root.innerHTML = '<div class="error">קישור לא תקין או פג תוקף.<br>בקשו מהשולח לשלוח שוב.</div>';
+        document.title = 'קישור לא תקין';
+        return;
+      }
+
+      document.title = `${snapshot.g} · ${snapshot.e}`;
+
+      const sections = (snapshot.s || []).map(function (sec) {
+        const items = sec.items.map(function (it) {
+          const mark = it.d
+            ? '<span class="mark done">✓</span>'
+            : '<span class="mark pending">○</span>';
+          const assignee = it.a == null
+            ? '<div class="assignee unassigned">טרם שובץ</div>'
+            : '<div class="assignee">' + escapeHtml(it.a) + '</div>';
+          return '<li>' + mark + '<div class="item-body"><div class="food">' +
+            escapeHtml(it.n) + '</div>' + assignee + '</div></li>';
+        }).join('');
+        return '<section><h2 class="slot-title">' + escapeHtml(sec.e) + ' ' +
+          escapeHtml(sec.l) + '</h2><ul>' + items + '</ul></section>';
+      }).join('');
+
+      const body = sections || '<div class="empty">עדיין אין מאכלים מתוכננים.</div>';
+
+      root.innerHTML =
+        '<header>' +
+          '<div class="brand">🕯️ שולחן ערוך</div>' +
+          '<h1>' + escapeHtml(snapshot.g) + '</h1>' +
+          '<div class="event">' + escapeHtml(snapshot.e) + '</div>' +
+          '<div class="dates">' + escapeHtml(snapshot.gd) + ' · ' + escapeHtml(snapshot.hd) + '</div>' +
+        '</header>' +
+        body +
+        '<footer>נשלח מ<a href="/">שולחן ערוך</a></footer>';
+    }
+
+    render(decodeFragment());
+    window.addEventListener('hashchange', function () { render(decodeFragment()); });
+  </script>
+</body>
+</html>

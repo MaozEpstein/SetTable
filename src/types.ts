@@ -1,7 +1,9 @@
 export type FoodCategory =
   | 'meat'
+  | 'fish'
   | 'carb'
   | 'salad'
+  | 'dips'
   | 'dessert'
   | 'cake'
   | (string & {}); // allows custom IDs while keeping autocomplete on the defaults
@@ -130,15 +132,29 @@ export type Group = {
   createdBy: string;
   createdAt: number;
   members: Record<string, Member>;
+  admins?: string[];
   customSlots?: CustomMealSlot[];
   customCategories?: CustomFoodCategory[];
   manualMembers?: ManualMember[];
 };
 
+// True if `uid` is an admin of the group. Falls back to `createdBy` for older
+// groups that predate the `admins` field — the creator is always admin.
+export function isGroupAdmin(group: Group, uid: string): boolean {
+  if (!uid) return false;
+  if (group.admins?.includes(uid)) return true;
+  if (!group.admins || group.admins.length === 0) {
+    return group.createdBy === uid;
+  }
+  return false;
+}
+
 export const FOOD_CATEGORIES: { key: FoodCategory; label: string; emoji: string }[] = [
   { key: 'meat', label: 'מנת בשר', emoji: '🥩' },
+  { key: 'fish', label: 'דגים', emoji: '🐟' },
   { key: 'carb', label: 'פחמימה', emoji: '🍚' },
   { key: 'salad', label: 'סלט', emoji: '🥗' },
+  { key: 'dips', label: 'מטבלים', emoji: '🥣' },
   { key: 'dessert', label: 'מנה אחרונה', emoji: '🍰' },
   { key: 'cake', label: 'עוגות', emoji: '🎂' },
 ];
