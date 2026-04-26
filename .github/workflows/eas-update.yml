@@ -4,14 +4,6 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - 'README.md'
-      - '.github/workflows/release.yml'
-      - '.github/workflows/deploy-web.yml'
-      - '.github/workflows/ci.yml'
-      - '.github/workflows/e2e.yml'
-      - 'public-share/**'
-      - 'scripts/**'
   workflow_dispatch:
     inputs:
       message:
