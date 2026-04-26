@@ -72,9 +72,17 @@ service cloud.firestore {
         request.auth.uid in request.resource.data.memberUids &&
         request.resource.data.createdBy == request.auth.uid &&
         isBoundedString(request.resource.data.name, 2, 50) &&
-        isBoundedString(request.resource.data.code, 4, 4) &&
+        isBoundedString(request.resource.data.code, 6, 6) &&
         request.resource.data.memberUids is list &&
-        request.resource.data.memberUids.size() <= 100;
+        request.resource.data.memberUids.size() <= 100 &&
+        // Lifetime cap of 80 groups created per user. Treats missing
+        // userProfile or missing counter as 0 for backward-compat with
+        // groups created before this rule existed.
+        (
+          !exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) ||
+          !('groupsCreated' in get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data) ||
+          get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.groupsCreated < 80
+        );
 
       allow update: if isSignedIn() && (
         // (a) joining: only added yourself
@@ -215,7 +223,17 @@ service cloud.firestore {
       allow update: if isSignedIn() && request.auth.uid == uid &&
         isOptionalBoundedString(request.resource.data, 'displayName', 30) &&
         isOptionalBoundedString(request.resource.data, 'username', 20) &&
-        isOptionalBoundedString(request.resource.data, 'email', 200);
+        isOptionalBoundedString(request.resource.data, 'email', 200) &&
+        // Counter is monotonic — prevents bypass of the 80-group cap by
+        // resetting groupsCreated to 0.
+        (
+          !('groupsCreated' in request.resource.data) ||
+          (
+            request.resource.data.groupsCreated is number &&
+            request.resource.data.groupsCreated >=
+              (resource.data.groupsCreated is number ? resource.data.groupsCreated : 0)
+          )
+        );
 
       allow delete: if isSignedIn() && request.auth.uid == uid;
     }

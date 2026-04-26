@@ -15,7 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useUser } from '../context/UserContext';
-import { createGroup } from '../services/groups';
+import { createGroup, GroupLimitReachedError } from '../services/groups';
 import { addGroupId } from '../storage';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { RootStackScreenProps } from '../navigation/types';
@@ -38,8 +38,12 @@ export function CreateGroupScreen({
       await addGroupId(id);
       navigation.replace('Group', { groupId: id });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו ליצור את הקבוצה.\n${message}`);
+      if (err instanceof GroupLimitReachedError) {
+        Alert.alert('הגעת למגבלה', err.message);
+      } else {
+        const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
+        Alert.alert('אופס', `לא הצלחנו ליצור את הקבוצה.\n${message}`);
+      }
     } finally {
       setCreating(false);
     }

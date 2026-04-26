@@ -1,5 +1,4 @@
 import {
-  addDoc,
   arrayRemove,
   arrayUnion,
   collection,
@@ -10,6 +9,7 @@ import {
   limit,
   onSnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -56,6 +56,20 @@ type CreateGroupInput = {
   userName: string;
 };
 
+// Lifetime cap on groups a single user can create. Mirrored in
+// firestore.rules — the rule is the source of truth, this constant
+// keeps the client error message consistent.
+export const MAX_GROUPS_PER_USER = 80;
+
+export class GroupLimitReachedError extends Error {
+  constructor() {
+    super(
+      `הגעת למגבלת ${MAX_GROUPS_PER_USER} קבוצות שניתן ליצור. אם אתה צריך יותר, פנה לתמיכה.`,
+    );
+    this.name = 'GroupLimitReachedError';
+  }
+}
+
 export async function createGroup({
   name,
   uid,
@@ -70,18 +84,41 @@ export async function createGroup({
     joinedAt: now,
   };
 
-  const ref = await addDoc(collection(db, GROUPS), {
-    name: name.trim(),
-    code,
-    createdBy: uid,
-    createdAt: now,
-    createdAtServer: serverTimestamp(),
-    members: { [uid]: member },
-    memberUids: [uid],
-    admins: [uid],
+  // Pre-generate the group ref so we can write it inside the transaction
+  // (runTransaction doesn't accept addDoc). The counter on the user's
+  // profile is incremented atomically so there's no race window where
+  // a user could fire 81 parallel requests and slip past the cap.
+  const groupRef = doc(collection(db, GROUPS));
+  const profileRef = doc(db, 'userProfiles', uid);
+
+  await runTransaction(db, async (tx) => {
+    const profileSnap = await tx.get(profileRef);
+    const current = profileSnap.exists()
+      ? ((profileSnap.data() as { groupsCreated?: number }).groupsCreated ?? 0)
+      : 0;
+    if (current >= MAX_GROUPS_PER_USER) {
+      throw new GroupLimitReachedError();
+    }
+
+    tx.set(groupRef, {
+      name: name.trim(),
+      code,
+      createdBy: uid,
+      createdAt: now,
+      createdAtServer: serverTimestamp(),
+      members: { [uid]: member },
+      memberUids: [uid],
+      admins: [uid],
+    });
+
+    tx.set(
+      profileRef,
+      { groupsCreated: current + 1 },
+      { merge: true },
+    );
   });
 
-  return { id: ref.id, code };
+  return { id: groupRef.id, code };
 }
 
 type JoinGroupResult =

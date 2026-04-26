@@ -252,6 +252,68 @@ describe('foods validation', () => {
   });
 });
 
+describe('group creation cap', () => {
+  test('user can create a group when under the 80 cap', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'userProfiles', 'alice'), {
+        groupsCreated: 5,
+      });
+    });
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(
+      setDoc(doc(aliceDb, 'groups', 'g-new'), {
+        name: 'משפחת כהן',
+        code: 'ABC123',
+        memberUids: ['alice'],
+        createdBy: 'alice',
+      }),
+    );
+  });
+
+  test('user cannot create a group at the 80 cap', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'userProfiles', 'alice'), {
+        groupsCreated: 80,
+      });
+    });
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'groups', 'g-new'), {
+        name: 'משפחת כהן',
+        code: 'ABC123',
+        memberUids: ['alice'],
+        createdBy: 'alice',
+      }),
+    );
+  });
+
+  test('user without a profile yet can still create their first group', async () => {
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertSucceeds(
+      setDoc(doc(aliceDb, 'groups', 'g-new'), {
+        name: 'משפחת כהן',
+        code: 'ABC123',
+        memberUids: ['alice'],
+        createdBy: 'alice',
+      }),
+    );
+  });
+
+  test('user cannot decrement their own groupsCreated counter', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'userProfiles', 'alice'), {
+        groupsCreated: 50,
+      });
+    });
+    const aliceDb = env.authenticatedContext('alice').firestore();
+    await assertFails(
+      updateDoc(doc(aliceDb, 'userProfiles', 'alice'), {
+        groupsCreated: 10,
+      }),
+    );
+  });
+});
+
 describe('username validation', () => {
   test('username with invalid characters is rejected', async () => {
     const aliceDb = env.authenticatedContext('alice').firestore();
