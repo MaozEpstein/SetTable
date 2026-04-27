@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -12,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { PlateIcon } from '../components/PlateIcon';
@@ -40,7 +40,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
 
   useEffect(() => {
     if (google.error) {
-      Alert.alert('Google Sign-In', google.error);
+      crossAlert('Google Sign-In', google.error);
     }
   }, [google.error]);
 
@@ -49,14 +49,14 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
     try {
       await google.promptAsync();
     } catch (err) {
-      Alert.alert('Google Sign-In', translateAuthError(err));
+      crossAlert('Google Sign-In', translateAuthError(err));
     }
   };
 
   const handleUsernameLogin = async () => {
     const u = username.trim();
     if (!u || !password) {
-      Alert.alert('חסרים פרטים', 'הזן שם משתמש וסיסמה');
+      crossAlert('חסרים פרטים', 'הזן שם משתמש וסיסמה');
       return;
     }
     setBusy(true);
@@ -64,7 +64,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
       await signInWithUsername(u, password);
       // onAuthStateChanged elsewhere will pick this up.
     } catch (err) {
-      Alert.alert('אופס', translateAuthError(err));
+      crossAlert('אופס', translateAuthError(err));
     } finally {
       setBusy(false);
     }
@@ -73,17 +73,17 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
   const handleForgot = async () => {
     const u = username.trim();
     if (!u) {
-      Alert.alert('שם משתמש', 'הזן את שם המשתמש כדי שנשלח קישור לאיפוס');
+      crossAlert('שם משתמש', 'הזן את שם המשתמש כדי שנשלח קישור לאיפוס');
       return;
     }
     try {
       const masked = await sendPasswordResetByUsername(u);
-      Alert.alert(
+      crossAlert(
         'נשלח קישור איפוס',
         `שלחנו קישור לאיפוס סיסמה לכתובת ${masked}.\nבדוק את תיבת הדואר.`,
       );
     } catch (err) {
-      Alert.alert('אופס', translateAuthError(err));
+      crossAlert('אופס', translateAuthError(err));
     }
   };
 

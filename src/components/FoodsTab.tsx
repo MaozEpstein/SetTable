@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AddCategoryModal } from './AddCategoryModal';
@@ -101,7 +102,7 @@ export function FoodsTab({ group }: Props) {
 
   const handleLongPressCategory = (cat: CategoryInfo) => {
     if (!cat.isCustom) return;
-    Alert.alert(
+    crossAlert(
       'מחיקת קטגוריה',
       `למחוק את "${cat.label}"?\nהקטגוריה תוסר מכל המאכלים שמשתמשים בה (המאכלים עצמם יישארו).`,
       [
@@ -114,7 +115,7 @@ export function FoodsTab({ group }: Props) {
               await removeCustomCategory(groupId, cat.key);
               if (activeTab === cat.key) setActiveTab('all');
             } catch {
-              Alert.alert('אופס', 'לא הצלחנו למחוק. נסה שוב.');
+              crossAlert('אופס', 'לא הצלחנו למחוק. נסה שוב.');
             }
           },
         },

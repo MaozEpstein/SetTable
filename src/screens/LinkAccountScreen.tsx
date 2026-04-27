@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -37,24 +37,24 @@ export function LinkAccountScreen({ onDone, onCancel }: Props) {
 
   const handleLink = async () => {
     const uCheck = validateUsername(username);
-    if (!uCheck.ok) return Alert.alert('שם משתמש', uCheck.reason);
+    if (!uCheck.ok) return crossAlert('שם משתמש', uCheck.reason);
     const eCheck = validateEmail(email);
-    if (!eCheck.ok) return Alert.alert('אימייל', eCheck.reason);
+    if (!eCheck.ok) return crossAlert('אימייל', eCheck.reason);
     const pCheck = validatePassword(password);
-    if (!pCheck.ok) return Alert.alert('סיסמה', pCheck.reason);
+    if (!pCheck.ok) return crossAlert('סיסמה', pCheck.reason);
 
     setBusy(true);
     try {
       const available = await isUsernameAvailable(username);
       if (!available) {
-        Alert.alert('שם משתמש תפוס', 'בחר שם אחר.');
+        crossAlert('שם משתמש תפוס', 'בחר שם אחר.');
         return;
       }
       await linkAnonymousAccount({ username, email, password });
-      Alert.alert('הצמדה הושלמה ✓', 'מעתה תוכל להיכנס מכל מכשיר עם שם המשתמש והסיסמה.');
+      crossAlert('הצמדה הושלמה ✓', 'מעתה תוכל להיכנס מכל מכשיר עם שם המשתמש והסיסמה.');
       onDone();
     } catch (err) {
-      Alert.alert('אופס', translateAuthError(err));
+      crossAlert('אופס', translateAuthError(err));
     } finally {
       setBusy(false);
     }

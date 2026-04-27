@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -8,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
 import { setAssignee } from '../services/assignments';
@@ -61,7 +61,7 @@ export function AssigneePickerModal({
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו לעדכן.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו לעדכן.\n${message}`);
     } finally {
       setSavingId(null);
     }

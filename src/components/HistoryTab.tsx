@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
 import { useAssignments } from '../hooks/useAssignments';
@@ -31,13 +32,13 @@ export function HistoryTab({ group }: Props) {
   const handleRestore = (entry: ShabbatHistoryEntry) => {
     const dishCount = entry.assignments.filter((a) => !a.isPlaceholder).length;
     if (dishCount === 0) {
-      Alert.alert(
+      crossAlert(
         'אין מאכלים לשחזור',
         'בארכיון הזה כל השיבוצים היו "שריון לפי קטגוריה" שלא ניתנים לשחזור אוטומטי.',
       );
       return;
     }
-    Alert.alert(
+    crossAlert(
       'שחזור הארוחה',
       `${dishCount} מאכלים מהארכיון הזה יוסיפו לארוחות הנוכחיות (לפי הסעודה המקורית).\n\nשיבוצי האנשים וסימוני "הוכן" לא יועתקו — תוכל לשבץ מחדש.`,
       [
@@ -66,9 +67,9 @@ export function HistoryTab({ group }: Props) {
               if (result.skippedPlaceholders > 0) {
                 parts.push(`${result.skippedPlaceholders} שיריונים דולגו`);
               }
-              Alert.alert('שוחזר ✓', parts.join('\n'));
+              crossAlert('שוחזר ✓', parts.join('\n'));
             } catch {
-              Alert.alert('אופס', 'לא הצלחנו לשחזר. נסה שוב.');
+              crossAlert('אופס', 'לא הצלחנו לשחזר. נסה שוב.');
             } finally {
               setRestoringId(null);
             }
@@ -79,7 +80,7 @@ export function HistoryTab({ group }: Props) {
   };
 
   const handleDelete = (entry: ShabbatHistoryEntry) => {
-    Alert.alert(
+    crossAlert(
       'מחיקת ארכיון',
       `למחוק את הארכיון מ-${formatTitle(entry)}?\nפעולה זו לא ניתנת לביטול.`,
       [
@@ -88,7 +89,7 @@ export function HistoryTab({ group }: Props) {
           text: 'מחק',
           style: 'destructive',
           onPress: () => deleteHistoryEntry(group.id, entry.id).catch(() => {
-            Alert.alert('אופס', 'לא הצלחנו למחוק.');
+            crossAlert('אופס', 'לא הצלחנו למחוק.');
           }),
         },
       ],

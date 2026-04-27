@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { useToast } from './Toast';
@@ -45,7 +46,7 @@ export function MembersTab({ group }: Props) {
           try {
             await promoteToAdmin(group.id, member.uid);
           } catch {
-            Alert.alert('אופס', 'לא הצלחנו לעדכן הרשאות. נסה שוב.');
+            crossAlert('אופס', 'לא הצלחנו לעדכן הרשאות. נסה שוב.');
           }
         },
       });
@@ -56,11 +57,11 @@ export function MembersTab({ group }: Props) {
       onPress: () => confirmKick(member),
     });
     buttons.push({ text: 'ביטול', style: 'cancel' });
-    Alert.alert(member.name, targetIsAdmin ? 'משתתף זה כבר מנהל.' : 'בחר פעולה:', buttons);
+    crossAlert(member.name, targetIsAdmin ? 'משתתף זה כבר מנהל.' : 'בחר פעולה:', buttons);
   };
 
   const confirmKick = (member: Member) => {
-    Alert.alert(
+    crossAlert(
       `הוצאת ${member.name}`,
       'האם אתה בטוח שאתה רוצה להוציא את המשתתף מהקבוצה?',
       [
@@ -72,7 +73,7 @@ export function MembersTab({ group }: Props) {
             try {
               await kickMember(group.id, member.uid);
             } catch {
-              Alert.alert('אופס', 'לא הצלחנו להוציא את המשתתף. נסה שוב.');
+              crossAlert('אופס', 'לא הצלחנו להוציא את המשתתף. נסה שוב.');
             }
           },
         },
@@ -84,7 +85,7 @@ export function MembersTab({ group }: Props) {
   );
 
   const handleLeave = () => {
-    Alert.alert(
+    crossAlert(
       `עזיבת "${group.name}"`,
       'תוסר מרשימת חברי הקבוצה ולא תראה יותר את המאכלים והשיבוצים שלה. תוכל להצטרף שוב בעתיד עם הקוד.',
       [
@@ -99,7 +100,7 @@ export function MembersTab({ group }: Props) {
               await removeGroupId(group.id);
               navigation.goBack();
             } catch {
-              Alert.alert('אופס', 'לא הצלחנו לעזוב את הקבוצה. נסה שוב.');
+              crossAlert('אופס', 'לא הצלחנו לעזוב את הקבוצה. נסה שוב.');
               setLeaving(false);
             }
           },
@@ -109,7 +110,7 @@ export function MembersTab({ group }: Props) {
   };
 
   const handleRemoveManual = (member: ManualMember) => {
-    Alert.alert(
+    crossAlert(
       `הסרת "${member.name}"`,
       'המשתתף יוסר מהקבוצה. שיבוצים שהוקצו לו יחזרו ל"טרם שובץ".',
       [
@@ -121,7 +122,7 @@ export function MembersTab({ group }: Props) {
             try {
               await removeManualMember(group.id, member.id);
             } catch {
-              Alert.alert('אופס', 'לא הצלחנו להסיר. נסה שוב.');
+              crossAlert('אופס', 'לא הצלחנו להסיר. נסה שוב.');
             }
           },
         },
@@ -135,7 +136,7 @@ export function MembersTab({ group }: Props) {
   };
 
   const handleRegenerateCode = () => {
-    Alert.alert(
+    crossAlert(
       'החלפת קוד הזמנה',
       'הקוד הנוכחי יבוטל ויונפק קוד חדש. מי שעוד לא הצטרף יצטרך לקבל את הקוד החדש.',
       [

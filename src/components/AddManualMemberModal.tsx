@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
 import { addManualMember } from '../services/groups';
@@ -49,7 +49,7 @@ export function AddManualMemberModal({ visible, groupId, onClose }: Props) {
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו להוסיף משתתף.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו להוסיף משתתף.\n${message}`);
     } finally {
       setSaving(false);
     }

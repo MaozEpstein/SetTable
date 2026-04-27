@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -8,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { CategoryTabs, type CategorySubTab } from './CategoryTabs';
 import { PrimaryButton } from './PrimaryButton';
 import { useFoods } from '../hooks/useFoods';
@@ -88,7 +88,7 @@ export function ReplacePlaceholderModal({
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו להחליף.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו להחליף.\n${message}`);
     } finally {
       setSavingId(null);
     }

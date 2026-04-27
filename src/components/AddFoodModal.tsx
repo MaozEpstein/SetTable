@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
 import { createFood, DuplicateFoodNameError } from '../services/foods';
@@ -86,10 +86,10 @@ export function AddFoodModal({
       onCreated?.(newId);
     } catch (err) {
       if (err instanceof DuplicateFoodNameError) {
-        Alert.alert('כפילות', err.message);
+        crossAlert('כפילות', err.message);
       } else {
         const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-        Alert.alert('אופס', `לא הצלחנו להוסיף את המאכל.\n${message}`);
+        crossAlert('אופס', `לא הצלחנו להוסיף את המאכל.\n${message}`);
       }
     } finally {
       setSaving(false);

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import * as Clipboard from 'expo-clipboard';
 import { useToast } from './Toast';
 import { AddFoodToSlotModal } from './AddFoodToSlotModal';
@@ -107,18 +108,18 @@ export function MealsTab({ group }: Props) {
 
   const handleToggleDone = (assignment: Assignment) => {
     setDone(groupId, assignment.id, !assignment.done).catch(() => {
-      Alert.alert('אופס', 'לא הצלחנו לעדכן. נסה שוב.');
+      crossAlert('אופס', 'לא הצלחנו לעדכן. נסה שוב.');
     });
   };
 
   const handleDelete = (assignment: Assignment, foodName: string) => {
-    Alert.alert('הסר שיבוץ', `להסיר את "${foodName}" מהסעודה?`, [
+    crossAlert('הסר שיבוץ', `להסיר את "${foodName}" מהסעודה?`, [
       { text: 'ביטול', style: 'cancel' },
       {
         text: 'הסר',
         style: 'destructive',
         onPress: () => deleteAssignment(groupId, assignment.id).catch(() => {
-          Alert.alert('אופס', 'לא הצלחנו להסיר. נסה שוב.');
+          crossAlert('אופס', 'לא הצלחנו להסיר. נסה שוב.');
         }),
       },
     ]);
@@ -126,7 +127,7 @@ export function MealsTab({ group }: Props) {
 
   const handleLongPressSlot = (slot: SlotInfo) => {
     if (!slot.isCustom) return;
-    Alert.alert(
+    crossAlert(
       `מחיקת ארוחה`,
       `למחוק את "${slot.label}"?\nכל השיבוצים בסעודה הזו יימחקו גם.`,
       [
@@ -139,7 +140,7 @@ export function MealsTab({ group }: Props) {
               await removeCustomSlot(groupId, slot.key);
               if (activeSubTab === slot.key) setActiveSubTab('all');
             } catch {
-              Alert.alert('אופס', 'לא הצלחנו למחוק. נסה שוב.');
+              crossAlert('אופס', 'לא הצלחנו למחוק. נסה שוב.');
             }
           },
         },
@@ -193,7 +194,7 @@ export function MealsTab({ group }: Props) {
   const handleShare = async () => {
     if (sharing) return;
     if (assignments.length === 0) {
-      Alert.alert(
+      crossAlert(
         'אין תכנון לשתף',
         'הוסף מאכלים לארוחות לפני שתשתף את התכנון.',
       );
@@ -215,7 +216,7 @@ export function MealsTab({ group }: Props) {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו לשתף.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו לשתף.\n${message}`);
     } finally {
       setSharing(false);
     }
@@ -223,7 +224,7 @@ export function MealsTab({ group }: Props) {
 
   const handleShareLink = async () => {
     if (assignments.length === 0) {
-      Alert.alert(
+      crossAlert(
         'אין תכנון לשתף',
         'הוסף מאכלים לארוחות לפני שתשתף את התכנון.',
       );
@@ -244,13 +245,13 @@ export function MealsTab({ group }: Props) {
       showToast('קישור התפריט הועתק ללוח');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו ליצור קישור.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו ליצור קישור.\n${message}`);
     }
   };
 
   const handleEndShabbat = () => {
     if (assignments.length === 0) {
-      Alert.alert(
+      crossAlert(
         'אין מה לארכב',
         'אין שיבוצים פעילים. הוסף מאכלים לארוחות לפני סיום שבת/חג.',
       );
@@ -272,7 +273,7 @@ export function MealsTab({ group }: Props) {
       detailParts.push(`מזוהה כ-${baseLabel} (לפי היום בשבוע)`);
     }
     detailParts.push(`תאריך עברי: ${hebrew.hebrewDate}`);
-    Alert.alert(
+    crossAlert(
       `🕯️ סיום ${detailLabel}`,
       `${detailParts.join('\n')}\n\n${assignments.length} השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" וכל הארוחות יתאפסו.\n\nהמאכלים בקטלוג, החברים, הקטגוריות והסעודות המותאמות יישארו ללא שינוי.`,
       [
@@ -290,13 +291,13 @@ export function MealsTab({ group }: Props) {
                 archivedByName: userName,
                 assignments: snapshot,
               });
-              Alert.alert(
+              crossAlert(
                 'נשמר בהצלחה ✓',
                 `נשמרו ${snapshot.length} שיבוצים ב-${detailLabel} בהיסטוריה. ${baseLabel === 'שבת' ? 'שבת חדשה' : 'חג חדש'} — מתחילים מחדש.`,
               );
             } catch (err) {
               const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-              Alert.alert('אופס', `לא הצלחנו לנקות.\n${message}`);
+              crossAlert('אופס', `לא הצלחנו לנקות.\n${message}`);
             } finally {
               setEndingShabbat(false);
             }

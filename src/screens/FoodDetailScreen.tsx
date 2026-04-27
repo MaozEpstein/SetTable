@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -13,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -132,7 +132,7 @@ export function FoodDetailScreen({
       setEditing(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו לשמור.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו לשמור.\n${message}`);
     } finally {
       setSaving(false);
     }
@@ -153,7 +153,7 @@ export function FoodDetailScreen({
       await addImageToFood(groupId, foodId, manipulated.uri);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      Alert.alert('אופס', `לא הצלחנו להעלות תמונה.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו להעלות תמונה.\n${message}`);
     } finally {
       setUploadingImage(false);
     }
@@ -162,7 +162,7 @@ export function FoodDetailScreen({
   const handleTakePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
+      crossAlert(
         'הרשאת מצלמה נדרשת',
         'כדי לצלם תמונה, יש לאשר גישה למצלמה בהגדרות הטלפון. אפשר גם לבחור תמונה מהגלריה במקום.',
       );
@@ -180,7 +180,7 @@ export function FoodDetailScreen({
   const handlePickFromGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('הרשאה נדרשת', 'אפשר את הגישה לתמונות בהגדרות הטלפון.');
+      crossAlert('הרשאה נדרשת', 'אפשר את הגישה לתמונות בהגדרות הטלפון.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -193,7 +193,7 @@ export function FoodDetailScreen({
   };
 
   const handlePickImage = () => {
-    Alert.alert(
+    crossAlert(
       'הוספת תמונה',
       'איך תרצה להוסיף תמונה?',
       [
@@ -201,25 +201,24 @@ export function FoodDetailScreen({
         { text: '🖼️ בחר מהגלריה', onPress: handlePickFromGallery },
         { text: 'ביטול', style: 'cancel' },
       ],
-      { cancelable: true },
     );
   };
 
   const handleDeleteImage = (url: string) => {
-    Alert.alert('מחיקת תמונה', 'למחוק את התמונה?', [
+    crossAlert('מחיקת תמונה', 'למחוק את התמונה?', [
       { text: 'ביטול', style: 'cancel' },
       {
         text: 'מחק',
         style: 'destructive',
         onPress: () => removeImageFromFood(groupId, foodId, url).catch(() => {
-          Alert.alert('אופס', 'לא הצלחנו למחוק את התמונה.');
+          crossAlert('אופס', 'לא הצלחנו למחוק את התמונה.');
         }),
       },
     ]);
   };
 
   const handleDeleteFood = () => {
-    Alert.alert(
+    crossAlert(
       'מחיקת מאכל',
       `האם אתה בטוח שברצונך למחוק את "${food.name}"?\n\nכל השיבוצים של המאכל לארוחות יימחקו, וגם כל התמונות שהועלו לו. פעולה זו לא ניתנת לביטול.`,
       [
@@ -233,7 +232,7 @@ export function FoodDetailScreen({
               await deleteFood(groupId, foodId);
               navigation.goBack();
             } catch {
-              Alert.alert('אופס', 'לא הצלחנו למחוק. נסה שוב.');
+              crossAlert('אופס', 'לא הצלחנו למחוק. נסה שוב.');
             }
           },
         },
@@ -246,10 +245,10 @@ export function FoodDetailScreen({
     setAddingToSlot(true);
     try {
       await createAssignment({ groupId, foodId, slot: slot.key, uid });
-      Alert.alert('שובץ ✓', `"${food.name}" נוסף ל${slot.label}.`);
+      crossAlert('שובץ ✓', `"${food.name}" נוסף ל${slot.label}.`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו לשבץ.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו לשבץ.\n${message}`);
     } finally {
       setAddingToSlot(false);
     }
@@ -281,7 +280,7 @@ export function FoodDetailScreen({
       await Linking.openURL(url);
     } catch {
       await Clipboard.setStringAsync(text);
-      Alert.alert('הועתק', 'הפרטים הועתקו ללוח. הדבק ב-WhatsApp.');
+      crossAlert('הועתק', 'הפרטים הועתקו ללוח. הדבק ב-WhatsApp.');
     }
   };
 

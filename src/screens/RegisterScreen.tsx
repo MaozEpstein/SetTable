@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { PlateIcon } from '../components/PlateIcon';
@@ -38,21 +38,21 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
   const handleRegister = async () => {
     const uCheck = validateUsername(username);
     if (!uCheck.ok) {
-      Alert.alert('שם משתמש', uCheck.reason);
+      crossAlert('שם משתמש', uCheck.reason);
       return;
     }
     const eCheck = validateEmail(email);
     if (!eCheck.ok) {
-      Alert.alert('אימייל', eCheck.reason);
+      crossAlert('אימייל', eCheck.reason);
       return;
     }
     const pCheck = validatePassword(password);
     if (!pCheck.ok) {
-      Alert.alert('סיסמה', pCheck.reason);
+      crossAlert('סיסמה', pCheck.reason);
       return;
     }
     if (displayName.trim().length < 2) {
-      Alert.alert('שם תצוגה', 'הזן שם תצוגה (לפחות 2 תווים)');
+      crossAlert('שם תצוגה', 'הזן שם תצוגה (לפחות 2 תווים)');
       return;
     }
 
@@ -60,7 +60,7 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
     try {
       const available = await isUsernameAvailable(username);
       if (!available) {
-        Alert.alert('שם משתמש תפוס', 'שם המשתמש תפוס. בחר שם אחר.');
+        crossAlert('שם משתמש תפוס', 'שם המשתמש תפוס. בחר שם אחר.');
         return;
       }
       await registerWithUsername({
@@ -71,7 +71,7 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
       });
       // onAuthStateChanged elsewhere will pick up the new user.
     } catch (err) {
-      Alert.alert('אופס', translateAuthError(err));
+      crossAlert('אופס', translateAuthError(err));
     } finally {
       setBusy(false);
     }

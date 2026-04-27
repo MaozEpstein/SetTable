@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -8,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { CategoryTabs, type CategorySubTab } from './CategoryTabs';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
@@ -123,7 +123,7 @@ export function AddFoodToSlotModal({
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו להוסיף שיריון.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו להוסיף שיריון.\n${message}`);
     } finally {
       setAddingPlaceholderKey(null);
     }
@@ -143,7 +143,7 @@ export function AddFoodToSlotModal({
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו לשבץ.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו לשבץ.\n${message}`);
     } finally {
       setSaving(false);
     }

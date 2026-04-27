@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -39,10 +39,10 @@ export function CreateGroupScreen({
       navigation.replace('Group', { groupId: id });
     } catch (err) {
       if (err instanceof GroupLimitReachedError) {
-        Alert.alert('הגעת למגבלה', err.message);
+        crossAlert('הגעת למגבלה', err.message);
       } else {
         const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-        Alert.alert('אופס', `לא הצלחנו ליצור את הקבוצה.\n${message}`);
+        crossAlert('אופס', `לא הצלחנו ליצור את הקבוצה.\n${message}`);
       }
     } finally {
       setCreating(false);

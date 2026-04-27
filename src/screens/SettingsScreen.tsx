@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -51,14 +51,14 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
       setEditing(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו לעדכן את השם.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו לעדכן את השם.\n${message}`);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    crossAlert(
       'מחיקת חשבון',
       'האם אתה בטוח שברצונך למחוק את החשבון שלך לצמיתות?\n\nהקבוצות שיצרת יישמרו ויישארו פעילות עבור שאר החברים — רק אתה תוסר מהן. שם המשתמש שלך ישוחרר וניתן יהיה לרשום אותו מחדש.\n\nפעולה זו לא ניתנת לביטול.',
       [
@@ -73,7 +73,7 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
   };
 
   const confirmDeleteAccount = () => {
-    Alert.alert(
+    crossAlert(
       'אישור אחרון',
       'מחיקת החשבון לא ניתנת לביטול. ללחוץ "מחק" כדי לאשר.',
       [
@@ -88,12 +88,12 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
             } catch (err) {
               const code = (err as { code?: string }).code;
               if (code === 'auth/requires-recent-login') {
-                Alert.alert(
+                crossAlert(
                   'דרושה התחברות מחדש',
                   'מטעמי אבטחה — התנתק והתחבר שוב, ואז נסה למחוק.',
                 );
               } else {
-                Alert.alert('אופס', translateAuthError(err));
+                crossAlert('אופס', translateAuthError(err));
               }
             }
           },
@@ -107,7 +107,7 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
       authMethod === 'anonymous'
         ? 'אתה מחובר כאורח — אם תתנתק כעת תאבד את הקבוצות שלך.\n\nמומלץ להצמיד חשבון לפני שתתנתק.'
         : 'תוכל להיכנס שוב מכל מכשיר עם פרטי ההתחברות שלך.';
-    Alert.alert(
+    crossAlert(
       'התנתקות',
       warning,
       [

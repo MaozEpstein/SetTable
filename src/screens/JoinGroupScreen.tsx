@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { crossAlert } from '../utils/crossAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -39,9 +39,9 @@ export function JoinGroupScreen({
       const result = await joinGroupByCode({ code: normalizedCode, uid, userName });
       if (!result.ok) {
         if (result.reason === 'not_found') {
-          Alert.alert('לא נמצאה קבוצה', 'לא נמצאה קבוצה עם הקוד הזה. בדוק את הקוד ונסה שוב.');
+          crossAlert('לא נמצאה קבוצה', 'לא נמצאה קבוצה עם הקוד הזה. בדוק את הקוד ונסה שוב.');
         } else {
-          Alert.alert('כבר חבר', 'אתה כבר חבר בקבוצה הזו.');
+          crossAlert('כבר חבר', 'אתה כבר חבר בקבוצה הזו.');
         }
         return;
       }
@@ -49,7 +49,7 @@ export function JoinGroupScreen({
       navigation.replace('Group', { groupId: result.id });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
-      Alert.alert('אופס', `לא הצלחנו להצטרף לקבוצה.\n${message}`);
+      crossAlert('אופס', `לא הצלחנו להצטרף לקבוצה.\n${message}`);
     } finally {
       setJoining(false);
     }
