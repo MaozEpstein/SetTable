@@ -16,15 +16,13 @@ import { useFoods } from '../hooks/useFoods';
 import { deleteAssignment, setDone } from '../services/assignments';
 import { removeCustomSlot } from '../services/groups';
 import { archiveAndClearAssignments } from '../services/history';
-import { getHebrewContext } from '../utils/hebrewCalendar';
+import { getMostRecentEventContext } from '../utils/hebrewCalendar';
 import { buildShareText } from '../utils/shareShabbatPlan';
 import { buildMenuSnapshot, encodeSnapshot } from '../utils/buildMenuSnapshot';
 import { PrimaryButton } from './PrimaryButton';
 import { MealRowSkeleton } from './Skeleton';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
-  detectEventType,
-  eventLabel,
   getAllAssignees,
   getAllCategories,
   getAllSlots,
@@ -254,22 +252,14 @@ export function MealsTab({ group }: Props) {
       );
       return;
     }
-    const now = Date.now();
-    const detectedType = detectEventType(now);
-    const baseLabel = eventLabel(detectedType); // "שבת" / "חג"
-    const hebrew = getHebrewContext(new Date(now));
-    // If it's a known holiday, prefer that specific name; otherwise use parsha for shabbat
-    let detailLabel = baseLabel;
-    const detailParts: string[] = [];
-    if (hebrew.holiday) {
-      detailLabel = hebrew.holiday;
-      detailParts.push(`מזוהה כ-${detailLabel}`);
-    } else if (detectedType === 'shabbat' && hebrew.parsha) {
-      detailParts.push(`מזוהה כ-${baseLabel} (${hebrew.parsha})`);
-    } else {
-      detailParts.push(`מזוהה כ-${baseLabel} (לפי היום בשבוע)`);
-    }
-    detailParts.push(`תאריך עברי: ${hebrew.hebrewDate}`);
+    // The archive label always describes a *past* event — the holiday
+    // or shabbat that just ended. Holidays in the last 14 days take
+    // precedence over a plain Shabbat falling later in that window.
+    const past = getMostRecentEventContext(new Date());
+    const baseLabel = past?.type === 'holiday' ? 'חג' : 'שבת';
+    const detailLabel = past?.name ?? baseLabel;
+    const detailParts: string[] = [`מזוהה כ-${detailLabel}`];
+    if (past) detailParts.push(`תאריך עברי: ${past.hebrewDate}`);
     crossAlert(
       `🕯️ סיום ${detailLabel}`,
       `${detailParts.join('\n')}\n\n${assignments.length} השיבוצים הנוכחיים יישלחו לארכיון וכל הארוחות יתאפסו.\n\nהמאכלים בקטלוג, החברים, הקטגוריות והסעודות המותאמות יישארו ללא שינוי.`,
@@ -287,6 +277,8 @@ export function MealsTab({ group }: Props) {
                 archivedBy: uid,
                 archivedByName: userName,
                 assignments: snapshot,
+                eventName: past?.name,
+                eventType: past?.type,
               });
               crossAlert(
                 'נשמר בהצלחה ✓',

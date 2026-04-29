@@ -33,6 +33,8 @@ type ArchiveAndClearInput = {
   archivedBy: string;
   archivedByName: string;
   assignments: ArchivedAssignment[];
+  eventName?: string;
+  eventType?: 'shabbat' | 'holiday';
 };
 
 export async function archiveAndClearAssignments({
@@ -40,6 +42,8 @@ export async function archiveAndClearAssignments({
   archivedBy,
   archivedByName,
   assignments,
+  eventName,
+  eventType,
 }: ArchiveAndClearInput): Promise<void> {
   // 1. Snapshot the current assignments into a history doc
   const archivedAt = Date.now();
@@ -49,7 +53,8 @@ export async function archiveAndClearAssignments({
     archivedByName,
     assignmentCount: assignments.length,
     assignments,
-    eventType: detectEventType(archivedAt),
+    eventType: eventType ?? detectEventType(archivedAt),
+    ...(eventName ? { eventName } : {}),
   });
 
   // 2. Delete the live assignments in a single batch

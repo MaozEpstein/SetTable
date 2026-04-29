@@ -70,6 +70,62 @@ function findParsha(date: Date): string | null {
   return null;
 }
 
+export type EventContext = {
+  type: 'shabbat' | 'holiday';
+  // Display name: holiday name (e.g. "פסח") or "שבת פרשת בראשית".
+  name: string;
+  // The actual Gregorian date this event falls on (the Saturday, or
+  // the day of the holiday).
+  date: Date;
+  hebrewDate: string;
+};
+
+// Finds the next event (holiday or Saturday) starting from `from`,
+// scanning up to 14 days ahead. Holidays take precedence over a plain
+// Shabbat falling on the same day. Returns null only if neither shows
+// up in the window — practically impossible since every week has a
+// Saturday.
+export function getUpcomingEventContext(from: Date = new Date()): EventContext | null {
+  return scanForEvent(from, 1);
+}
+
+// Same as above but scans backwards. Used when archiving a meal plan
+// to label which event the user just finished hosting (might be
+// a holiday yesterday or last Saturday).
+export function getMostRecentEventContext(from: Date = new Date()): EventContext | null {
+  return scanForEvent(from, -1);
+}
+
+function scanForEvent(from: Date, direction: 1 | -1): EventContext | null {
+  // Include `from` itself as day 0 — if today is the event, that's
+  // what the user means.
+  for (let offset = 0; offset <= 14; offset += 1) {
+    const d = new Date(from.getTime());
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + offset * direction);
+
+    const holiday = findHoliday(d);
+    if (holiday) {
+      return {
+        type: 'holiday',
+        name: holiday,
+        date: d,
+        hebrewDate: formatHebrewDate(d),
+      };
+    }
+    if (d.getDay() === 6) {
+      const parsha = findParsha(d);
+      return {
+        type: 'shabbat',
+        name: parsha ? `שבת ${parsha}` : 'שבת',
+        date: d,
+        hebrewDate: formatHebrewDate(d),
+      };
+    }
+  }
+  return null;
+}
+
 function findHoliday(date: Date): string | null {
   const hd = new HDate(date);
   try {

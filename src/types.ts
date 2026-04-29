@@ -110,6 +110,10 @@ export type ShabbatHistoryEntry = {
   assignmentCount: number;
   assignments: ArchivedAssignment[];
   eventType?: EventType; // older entries may not have this — fall back to date heuristic
+  // Free-form display label written at archive time, e.g. "פסח" or
+  // "שבת פרשת בראשית". Newer entries set this; older ones fall back
+  // to a generic "שבת DATE" / "חג DATE" computed from archivedAt.
+  eventName?: string;
 };
 
 // Friday/Saturday/Sunday → assume the user is wrapping up Shabbat

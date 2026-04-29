@@ -271,14 +271,20 @@ function groupBySlot(items: ArchivedAssignment[]): Map<string, ArchivedAssignmen
   return map;
 }
 
-function formatTitle(entry: Pick<ShabbatHistoryEntry, 'eventType' | 'archivedAt'>): string {
+function formatTitle(
+  entry: Pick<ShabbatHistoryEntry, 'eventType' | 'archivedAt' | 'eventName'>,
+): string {
   const d = new Date(entry.archivedAt);
   const formatter = new Intl.DateTimeFormat('he-IL', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
   });
-  return `${eventLabel(eventTypeOf(entry))} ${formatter.format(d)}`;
+  // New entries store the event name (e.g. "פסח", "שבת פרשת בראשית")
+  // computed at archive time. Older entries fall back to the
+  // generic "שבת DATE" / "חג DATE" label.
+  const prefix = entry.eventName ?? eventLabel(eventTypeOf(entry));
+  return `${prefix} · ${formatter.format(d)}`;
 }
 
 const styles = StyleSheet.create({

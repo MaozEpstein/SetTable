@@ -1,6 +1,4 @@
 import {
-  detectEventType,
-  eventLabel,
   getCategoryInfo,
   getSlotInfo,
   isPlaceholderAssignment,
@@ -10,7 +8,7 @@ import {
   type Group,
   type SlotInfo,
 } from '../types';
-import { getHebrewContext } from './hebrewCalendar';
+import { getUpcomingEventContext } from './hebrewCalendar';
 
 // Compact JSON shape for the public menu page. Kept short on purpose
 // because it ends up base64-encoded inside a URL.
@@ -48,16 +46,16 @@ export function buildMenuSnapshot({
   assigneeById,
   slots,
 }: Input): MenuSnapshot {
-  const now = new Date();
-  const hebrew = getHebrewContext(now);
-  const detectedType = detectEventType(now.getTime());
-  const eventName =
-    hebrew.holiday ?? `${eventLabel(detectedType)}${hebrew.parsha ? ` · ${hebrew.parsha}` : ''}`;
+  // The link snapshot describes the *upcoming* event — same logic as
+  // the WhatsApp share text. See getUpcomingEventContext() for details.
+  const upcoming = getUpcomingEventContext(new Date());
+  const eventDate = upcoming?.date ?? new Date();
+  const eventName = upcoming?.name ?? 'שבת';
   const gregorian = new Intl.DateTimeFormat('he-IL', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
-  }).format(now);
+  }).format(eventDate);
 
   const bySlot = new Map<string, Assignment[]>();
   for (const slot of slots) bySlot.set(slot.key, []);
@@ -93,7 +91,7 @@ export function buildMenuSnapshot({
     v: 1,
     g: group.name,
     e: eventName,
-    hd: hebrew.hebrewDate,
+    hd: upcoming?.hebrewDate ?? '',
     gd: gregorian,
     s: sectionList,
   };

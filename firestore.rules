@@ -182,7 +182,8 @@ service cloud.firestore {
           request.resource.data.assignments is list &&
           request.resource.data.assignments.size() <= 500 &&
           request.resource.data.assignmentCount is number &&
-          request.resource.data.assignmentCount <= 500;
+          request.resource.data.assignmentCount <= 500 &&
+          isOptionalBoundedString(request.resource.data, 'eventName', 200);
 
         allow update: if false; // history is immutable
         allow delete: if isMemberOfGroup(groupId);

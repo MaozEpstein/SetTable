@@ -1,6 +1,4 @@
 import {
-  detectEventType,
-  eventLabel,
   getCategoryInfo,
   getFoodCategories,
   getSlotInfo,
@@ -11,7 +9,7 @@ import {
   type Group,
   type SlotInfo,
 } from '../types';
-import { getHebrewContext } from './hebrewCalendar';
+import { getUpcomingEventContext } from './hebrewCalendar';
 
 type BuildShareTextInput = {
   group: Group;
@@ -33,22 +31,23 @@ export function buildShareText({
   assigneeById,
   slots,
 }: BuildShareTextInput): string {
-  const now = new Date();
-  const hebrew = getHebrewContext(now);
-  const detectedType = detectEventType(now.getTime());
-  const eventName =
-    hebrew.holiday ?? `${eventLabel(detectedType)}${hebrew.parsha ? ` · ${hebrew.parsha}` : ''}`;
+  // Share text is always for the *upcoming* shabbat / חג — the one
+  // people are planning for. If today is mid-week with a holiday two
+  // days out, the snapshot still says "פסח", not "today's parsha".
+  const upcoming = getUpcomingEventContext(new Date());
+  const eventDate = upcoming?.date ?? new Date();
+  const eventName = upcoming?.name ?? 'שבת';
   const gregorian = new Intl.DateTimeFormat('he-IL', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
-  }).format(now);
+  }).format(eventDate);
 
   const lines: string[] = [];
   lines.push(`🕯️ שולחן ערוך — ${group.name}`);
   lines.push('');
   lines.push(`📅 ${eventName}`);
-  lines.push(`${gregorian} · ${hebrew.hebrewDate}`);
+  lines.push(`${gregorian} · ${upcoming?.hebrewDate ?? ''}`);
   lines.push('');
 
   // Group assignments by slot, in the canonical slot order
