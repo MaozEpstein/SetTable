@@ -93,11 +93,15 @@ function GroupCard({ group, onPress }: { group: Group; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
       style={({ pressed }) => [
         styles.card,
-        { opacity: pressed ? 0.7 : 1 },
+        pressed && styles.cardPressed,
       ]}
     >
+      <View style={styles.cardIcon}>
+        <Text style={styles.cardIconText}>👨‍👩‍👧</Text>
+      </View>
       <View style={styles.cardMain}>
         <Text style={styles.cardName} numberOfLines={1}>
           {group.name}
@@ -105,6 +109,7 @@ function GroupCard({ group, onPress }: { group: Group; onPress: () => void }) {
         <Text style={styles.cardMeta}>
           {memberCount} {memberCount === 1 ? 'חבר' : 'חברים'} · קוד: {group.code}
         </Text>
+        <Text style={styles.cardCta}>פתח ←</Text>
       </View>
       <Text style={styles.chevron}>‹</Text>
     </Pressable>
@@ -180,11 +185,29 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.lg,
     gap: spacing.md,
-    shadowColor: colors.shadow,
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  cardPressed: {
+    backgroundColor: '#FBEFD9',
+    transform: [{ scale: 0.98 }],
+    shadowOpacity: 0.4,
+  },
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FBEFD9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardIconText: {
+    fontSize: fontSize.xl,
   },
   cardMain: {
     flex: 1,
@@ -204,10 +227,18 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  cardCta: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bold,
+    color: colors.primary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: 2,
+  },
   chevron: {
     fontSize: fontSize.xxl,
-    color: colors.textMuted,
-    fontFamily: fontFamily.regular,
+    color: colors.primary,
+    fontFamily: fontFamily.bold,
   },
   emptyCard: {
     backgroundColor: colors.surface,

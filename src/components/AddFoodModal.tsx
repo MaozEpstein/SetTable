@@ -13,6 +13,7 @@ import {
 import { crossAlert } from '../utils/crossAlert';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
+import { useKeyboardOffset } from '../hooks/useKeyboardOffset';
 import { createFood, DuplicateFoodNameError } from '../services/foods';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { CategoryInfo, FoodCategory } from '../types';
@@ -39,6 +40,7 @@ export function AddFoodModal({
   onCreated,
 }: Props) {
   const { uid } = useUser();
+  const keyboardOffset = useKeyboardOffset();
   const [name, setName] = useState('');
   const [selected, setSelected] = useState<Set<FoodCategory>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -104,7 +106,10 @@ export function AddFoodModal({
       onRequestClose={handleClose}
     >
       <Pressable style={styles.backdrop} onPress={handleClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={[styles.sheet, { marginBottom: keyboardOffset }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >

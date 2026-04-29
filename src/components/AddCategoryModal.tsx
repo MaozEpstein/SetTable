@@ -12,6 +12,7 @@ import {
 import { crossAlert } from '../utils/crossAlert';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
+import { useKeyboardOffset } from '../hooks/useKeyboardOffset';
 import { addCustomCategory } from '../services/groups';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 
@@ -25,6 +26,7 @@ type Props = {
 
 export function AddCategoryModal({ visible, groupId, onClose }: Props) {
   const { uid } = useUser();
+  const keyboardOffset = useKeyboardOffset();
   const [label, setLabel] = useState('');
   const [emoji, setEmoji] = useState(EMOJI_OPTIONS[0]);
   const [saving, setSaving] = useState(false);
@@ -62,7 +64,10 @@ export function AddCategoryModal({ visible, groupId, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <Pressable style={styles.backdrop} onPress={handleClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={[styles.sheet, { marginBottom: keyboardOffset }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.handle} />
             <Text style={styles.title}>הוסף קטגוריה חדשה</Text>

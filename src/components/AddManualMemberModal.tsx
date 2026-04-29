@@ -12,6 +12,7 @@ import {
 import { crossAlert } from '../utils/crossAlert';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
+import { useKeyboardOffset } from '../hooks/useKeyboardOffset';
 import { addManualMember } from '../services/groups';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 
@@ -23,6 +24,7 @@ type Props = {
 
 export function AddManualMemberModal({ visible, groupId, onClose }: Props) {
   const { uid } = useUser();
+  const keyboardOffset = useKeyboardOffset();
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -58,7 +60,10 @@ export function AddManualMemberModal({ visible, groupId, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <Pressable style={styles.backdrop} onPress={handleClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={[styles.sheet, { marginBottom: keyboardOffset }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.handle} />
             <Text style={styles.title}>הוסף משתתף ידנית</Text>

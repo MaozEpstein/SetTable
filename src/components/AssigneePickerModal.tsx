@@ -11,6 +11,7 @@ import {
 import { crossAlert } from '../utils/crossAlert';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
+import { useKeyboardOffset } from '../hooks/useKeyboardOffset';
 import {
   ASSIGNMENT_NOTE_MAX,
   setAssignee,
@@ -46,6 +47,7 @@ export function AssigneePickerModal({
   onClose,
 }: Props) {
   const { uid, userName } = useUser();
+  const keyboardOffset = useKeyboardOffset();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [note, setNote] = useState(currentNote);
 
@@ -113,7 +115,10 @@ export function AssigneePickerModal({
       onRequestClose={() => { void closeWithNote(); }}
     >
       <Pressable style={styles.backdrop} onPress={() => { void closeWithNote(); }}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={[styles.sheet, { marginBottom: keyboardOffset }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <View style={styles.handle} />
           <Text style={styles.title}>מי מכין את "{foodName}"?</Text>
 
