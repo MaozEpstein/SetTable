@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import {
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { crossAlert } from '../utils/crossAlert';
+import { DismissKeyboardView } from '../components/DismissKeyboardView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -61,7 +60,7 @@ export function LinkAccountScreen({ onDone, onCancel }: Props) {
   };
 
   return (
-    <Pressable style={styles.flex} onPress={Keyboard.dismiss}>
+    <DismissKeyboardView style={styles.flex}>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <StatusBar style="dark" />
         <ScreenHeader title="הצמדת חשבון" onBack={onCancel} />
@@ -132,7 +131,7 @@ export function LinkAccountScreen({ onDone, onCancel }: Props) {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </Pressable>
+    </DismissKeyboardView>
   );
 }
 

@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import {
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { DismissKeyboardView } from '../components/DismissKeyboardView';
 import { StatusBar } from 'expo-status-bar';
 import { PlateIcon } from '../components/PlateIcon';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -39,7 +38,7 @@ export function OnboardingScreen({ onComplete }: Props) {
   };
 
   return (
-    <Pressable style={styles.flex} onPress={Keyboard.dismiss}>
+    <DismissKeyboardView style={styles.flex}>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <StatusBar style="dark" />
         <KeyboardAvoidingView
@@ -84,7 +83,7 @@ export function OnboardingScreen({ onComplete }: Props) {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </Pressable>
+    </DismissKeyboardView>
   );
 }
 

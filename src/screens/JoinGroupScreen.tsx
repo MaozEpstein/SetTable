@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import {
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { crossAlert } from '../utils/crossAlert';
+import { DismissKeyboardView } from '../components/DismissKeyboardView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -56,7 +55,7 @@ export function JoinGroupScreen({
   };
 
   return (
-    <Pressable style={styles.flex} onPress={Keyboard.dismiss}>
+    <DismissKeyboardView style={styles.flex}>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <StatusBar style="dark" />
         <ScreenHeader title="הצטרף לקבוצה" onBack={() => navigation.goBack()} />
@@ -97,7 +96,7 @@ export function JoinGroupScreen({
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </Pressable>
+    </DismissKeyboardView>
   );
 }
 

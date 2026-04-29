@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { crossAlert } from '../utils/crossAlert';
+import { DismissKeyboardView } from '../components/DismissKeyboardView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { PlateIcon } from '../components/PlateIcon';
@@ -88,7 +88,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
   };
 
   return (
-    <Pressable style={styles.flex} onPress={Keyboard.dismiss}>
+    <DismissKeyboardView style={styles.flex}>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <StatusBar style="dark" />
         <KeyboardAvoidingView
@@ -194,7 +194,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </Pressable>
+    </DismissKeyboardView>
   );
 }
 
