@@ -272,7 +272,7 @@ export function MealsTab({ group }: Props) {
     detailParts.push(`תאריך עברי: ${hebrew.hebrewDate}`);
     crossAlert(
       `🕯️ סיום ${detailLabel}`,
-      `${detailParts.join('\n')}\n\n${assignments.length} השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" וכל הארוחות יתאפסו.\n\nהמאכלים בקטלוג, החברים, הקטגוריות והסעודות המותאמות יישארו ללא שינוי.`,
+      `${detailParts.join('\n')}\n\n${assignments.length} השיבוצים הנוכחיים יישלחו לארכיון וכל הארוחות יתאפסו.\n\nהמאכלים בקטלוג, החברים, הקטגוריות והסעודות המותאמות יישארו ללא שינוי.`,
       [
         { text: 'ביטול', style: 'cancel' },
         {
@@ -290,7 +290,7 @@ export function MealsTab({ group }: Props) {
               });
               crossAlert(
                 'נשמר בהצלחה ✓',
-                `נשמרו ${snapshot.length} שיבוצים ב-${detailLabel} בהיסטוריה. ${baseLabel === 'שבת' ? 'שבת חדשה' : 'חג חדש'} — מתחילים מחדש.`,
+                `נשמרו ${snapshot.length} שיבוצים ב-${detailLabel} בארכיון. ${baseLabel === 'שבת' ? 'שבת חדשה' : 'חג חדש'} — מתחילים מחדש.`,
               );
             } catch (err) {
               const message = err instanceof Error ? err.message : 'שגיאה לא ידועה';
@@ -436,13 +436,13 @@ export function MealsTab({ group }: Props) {
           </View>
           <View style={styles.endShabbatSection}>
             <PrimaryButton
-              label="🕯️ סיום שבת/חג — נקה ארוחות"
+              label="🕯️ סיום שבת/חג — שלח לארכיון"
               variant="outline"
               onPress={handleEndShabbat}
               loading={endingShabbat}
             />
             <Text style={styles.endShabbatHint}>
-              השיבוצים הנוכחיים יישמרו בלשונית "היסטוריה" לפני הניקוי.
+              השיבוצים הנוכחיים יישמרו בלשונית "ארכיון" לפני הניקוי.
               הארכיון יתויג כשבת/חג לפי היום בשבוע.
             </Text>
           </View>

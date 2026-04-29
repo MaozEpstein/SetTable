@@ -99,7 +99,7 @@ export function HistoryTab({ group }: Props) {
   if (loading) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyText}>טוען היסטוריה...</Text>
+        <Text style={styles.emptyText}>טוען ארכיון...</Text>
       </View>
     );
   }
@@ -116,9 +116,9 @@ export function HistoryTab({ group }: Props) {
     return (
       <View style={styles.emptyCard}>
         <Text style={styles.emptyEmoji}>📜</Text>
-        <Text style={styles.emptyTitle}>אין עדיין היסטוריה</Text>
+        <Text style={styles.emptyTitle}>הארכיון ריק</Text>
         <Text style={styles.emptyText}>
-          בסיום שבת לחץ על "שבת הסתיימה" בלשונית הארוחות —{'\n'}
+          בסיום שבת/חג לחץ על "שלח לארכיון" בלשונית הארוחות —{'\n'}
           השיבוצים יישמרו כאן לצפייה.
         </Text>
       </View>

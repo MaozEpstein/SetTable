@@ -18,7 +18,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'meals', label: 'ארוחות' },
   { key: 'foods', label: 'מאכלים' },
   { key: 'members', label: 'חברים' },
-  { key: 'history', label: 'היסטוריה' },
+  { key: 'history', label: 'ארכיון' },
 ];
 
 export function GroupScreen({
