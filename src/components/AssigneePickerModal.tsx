@@ -1,16 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { crossAlert } from '../utils/crossAlert';
 import { PrimaryButton } from './PrimaryButton';
 import { useUser } from '../context/UserContext';
-import { setAssignee } from '../services/assignments';
+import {
+  ASSIGNMENT_NOTE_MAX,
+  setAssignee,
+  setAssignmentNote,
+} from '../services/assignments';
 import { sendPushNotification } from '../services/push';
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import type { AssigneeInfo } from '../types';
@@ -24,6 +29,7 @@ type Props = {
   slotLabel: string;
   assignees: AssigneeInfo[];
   currentAssigneeId: string | null;
+  currentNote: string;
   onClose: () => void;
 };
 
@@ -36,16 +42,39 @@ export function AssigneePickerModal({
   slotLabel,
   assignees,
   currentAssigneeId,
+  currentNote,
   onClose,
 }: Props) {
   const { uid, userName } = useUser();
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [note, setNote] = useState(currentNote);
+
+  // Reset local note when the modal reopens for a different assignment.
+  useEffect(() => {
+    if (visible) setNote(currentNote);
+  }, [visible, currentNote]);
+
+  const persistNoteIfChanged = async () => {
+    if (note === currentNote) return;
+    try {
+      await setAssignmentNote(groupId, assignmentId, note);
+    } catch {
+      // Silent — closing the modal shouldn't surface a blocking error;
+      // the user can retry by reopening.
+    }
+  };
+
+  const closeWithNote = async () => {
+    await persistNoteIfChanged();
+    onClose();
+  };
 
   const handlePick = async (newId: string | null, isManual: boolean) => {
     if (savingId) return;
     setSavingId(newId ?? '__none__');
     try {
       await setAssignee(groupId, assignmentId, newId);
+      await persistNoteIfChanged();
 
       const isAssigningOther =
         newId !== null && newId !== uid && newId !== currentAssigneeId && !isManual;
@@ -81,12 +110,25 @@ export function AssigneePickerModal({
       visible={visible}
       animationType="slide"
       transparent
-      onRequestClose={onClose}
+      onRequestClose={() => { void closeWithNote(); }}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={styles.backdrop} onPress={() => { void closeWithNote(); }}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
           <Text style={styles.title}>מי מכין את "{foodName}"?</Text>
+
+          <Text style={styles.noteLabel}>הערה (אופציונלי)</Text>
+          <TextInput
+            value={note}
+            onChangeText={setNote}
+            placeholder="למשל: להוציא מהמקפיא בערב שישי"
+            placeholderTextColor={colors.textMuted}
+            style={styles.noteInput}
+            multiline
+            maxLength={ASSIGNMENT_NOTE_MAX}
+            textAlign="right"
+            textAlignVertical="top"
+          />
 
           <ScrollView
             style={styles.list}
@@ -138,7 +180,11 @@ export function AssigneePickerModal({
             })}
           </ScrollView>
 
-          <PrimaryButton label="סגור" variant="outline" onPress={onClose} />
+          <PrimaryButton
+            label="סגור"
+            variant="outline"
+            onPress={() => { void closeWithNote(); }}
+          />
         </Pressable>
       </Pressable>
     </Modal>
@@ -175,6 +221,28 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
     marginBottom: spacing.sm,
+  },
+  noteLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginBottom: spacing.xs,
+  },
+  noteInput: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.regular,
+    color: colors.text,
+    minHeight: 60,
+    marginBottom: spacing.md,
+    writingDirection: 'rtl',
   },
   list: { flexGrow: 0 },
   listContent: { gap: spacing.xs, paddingBottom: spacing.md },

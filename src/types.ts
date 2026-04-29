@@ -76,6 +76,7 @@ export type Assignment = {
   slot: string;
   assignedTo: string | null; // a member uid OR a manualMember id OR null
   done: boolean;
+  note?: string; // free-text reminder shown under the assignee line
   createdBy: string;
   createdAt: number;
 };
@@ -96,6 +97,7 @@ export type ArchivedAssignment = {
   assigneeName: string | null;
   done: boolean;
   categoryLabels: string[];
+  note?: string;
 };
 
 export type EventType = 'shabbat' | 'holiday';

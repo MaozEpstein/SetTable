@@ -159,13 +159,15 @@ service cloud.firestore {
           (request.resource.data.foodId == null ||
             isBoundedString(request.resource.data.foodId, 1, 100)) &&
           (!('done' in request.resource.data) ||
-            request.resource.data.done is bool);
+            request.resource.data.done is bool) &&
+          isOptionalBoundedString(request.resource.data, 'note', 500);
 
         allow update: if isMemberOfGroup(groupId) &&
           (!('slot' in request.resource.data) ||
             isBoundedString(request.resource.data.slot, 1, 50)) &&
           (!('done' in request.resource.data) ||
-            request.resource.data.done is bool);
+            request.resource.data.done is bool) &&
+          isOptionalBoundedString(request.resource.data, 'note', 500);
 
         allow delete: if isMemberOfGroup(groupId);
       }

@@ -168,26 +168,28 @@ function App() {
   };
 
   return (
-    <SafeAreaProvider>
-      <WebFrame>
-        <ToastProvider>
-          <UserProvider
-            uid={authUser.uid}
-            userName={displayName}
-            username={profile?.username}
-            email={profile?.email}
-            authMethod={authMethod}
-            setUserName={handleSetUserName}
-            signOut={handleSignOut}
-          >
-            <RootNavigator />
-          </UserProvider>
-          {updateInfo && (
-            <UpdateAvailableModal info={updateInfo} onDismiss={handleDismissUpdate} />
-          )}
-        </ToastProvider>
-      </WebFrame>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.flex}>
+      <SafeAreaProvider>
+        <WebFrame>
+          <ToastProvider>
+              <UserProvider
+              uid={authUser.uid}
+              userName={displayName}
+              username={profile?.username}
+              email={profile?.email}
+              authMethod={authMethod}
+              setUserName={handleSetUserName}
+              signOut={handleSignOut}
+            >
+              <RootNavigator />
+            </UserProvider>
+            {updateInfo && (
+              <UpdateAvailableModal info={updateInfo} onDismiss={handleDismissUpdate} />
+            )}
+          </ToastProvider>
+        </WebFrame>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

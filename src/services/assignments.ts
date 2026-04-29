@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   onSnapshot,
@@ -87,6 +88,20 @@ export async function setAssignee(
 ): Promise<void> {
   await updateDoc(doc(db, 'groups', groupId, 'assignments', assignmentId), {
     assignedTo: uid,
+  });
+}
+
+// Hard cap matches the firestore rule for `note` length.
+export const ASSIGNMENT_NOTE_MAX = 500;
+
+export async function setAssignmentNote(
+  groupId: string,
+  assignmentId: string,
+  note: string,
+): Promise<void> {
+  const trimmed = note.trim().slice(0, ASSIGNMENT_NOTE_MAX);
+  await updateDoc(doc(db, 'groups', groupId, 'assignments', assignmentId), {
+    note: trimmed.length === 0 ? deleteField() : trimmed,
   });
 }
 

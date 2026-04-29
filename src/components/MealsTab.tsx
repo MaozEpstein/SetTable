@@ -9,6 +9,7 @@ import { AssigneePickerModal } from './AssigneePickerModal';
 import { MealSlotTabs, type MealSubTab } from './MealSlotTabs';
 import { ReplacePlaceholderModal } from './ReplacePlaceholderModal';
 import { SlotPickerModal } from './SlotPickerModal';
+import { SwipeToDeleteRow } from './SwipeToDeleteRow';
 import { useUser } from '../context/UserContext';
 import { useAssignments } from '../hooks/useAssignments';
 import { useFoods } from '../hooks/useFoods';
@@ -58,6 +59,7 @@ export function MealsTab({ group }: Props) {
     foodName: string;
     slotLabel: string;
     assignedTo: string | null;
+    note: string;
   } | null>(null);
   const [addSlotModalVisible, setAddSlotModalVisible] = useState(false);
   const [slotPickerVisible, setSlotPickerVisible] = useState(false);
@@ -112,17 +114,10 @@ export function MealsTab({ group }: Props) {
     });
   };
 
-  const handleDelete = (assignment: Assignment, foodName: string) => {
-    crossAlert('הסר שיבוץ', `להסיר את "${foodName}" מהסעודה?`, [
-      { text: 'ביטול', style: 'cancel' },
-      {
-        text: 'הסר',
-        style: 'destructive',
-        onPress: () => deleteAssignment(groupId, assignment.id).catch(() => {
-          crossAlert('אופס', 'לא הצלחנו להסיר. נסה שוב.');
-        }),
-      },
-    ]);
+  const handleDelete = (assignment: Assignment) => {
+    deleteAssignment(groupId, assignment.id).catch(() => {
+      crossAlert('אופס', 'לא הצלחנו להסיר. נסה שוב.');
+    });
   };
 
   const handleLongPressSlot = (slot: SlotInfo) => {
@@ -155,6 +150,7 @@ export function MealsTab({ group }: Props) {
       foodName,
       slotLabel: slotInfo?.label ?? '(סעודה נמחקה)',
       assignedTo: a.assignedTo,
+      note: a.note ?? '',
     };
   };
 
@@ -187,6 +183,7 @@ export function MealsTab({ group }: Props) {
         assigneeName: assignee?.name ?? null,
         done: !!a.done,
         categoryLabels,
+        ...(a.note ? { note: a.note } : {}),
       };
     });
   };
@@ -341,7 +338,7 @@ export function MealsTab({ group }: Props) {
           onAdd={() => setSlotPickerVisible(true)}
           onToggleDone={handleToggleDone}
           onChangeAssignee={handleRowPress}
-          onLongPress={handleDelete}
+          onDelete={handleDelete}
         />
       ) : (
         <SingleSlotView
@@ -356,7 +353,7 @@ export function MealsTab({ group }: Props) {
           }}
           onToggleDone={handleToggleDone}
           onChangeAssignee={handleRowPress}
-          onLongPress={handleDelete}
+          onDelete={handleDelete}
         />
       )}
 
@@ -383,6 +380,7 @@ export function MealsTab({ group }: Props) {
           slotLabel={editingAssignment.slotLabel}
           assignees={assignees}
           currentAssigneeId={editingAssignment.assignedTo}
+          currentNote={editingAssignment.note}
           onClose={() => setEditingAssignment(null)}
         />
       )}
@@ -464,7 +462,7 @@ type AllViewProps = {
   onAdd: () => void;
   onToggleDone: (a: Assignment) => void;
   onChangeAssignee: (a: Assignment, foodName: string) => void;
-  onLongPress: (a: Assignment, foodName: string) => void;
+  onDelete: (a: Assignment) => void;
 };
 
 function AllAssignmentsView({
@@ -477,7 +475,7 @@ function AllAssignmentsView({
   onAdd,
   onToggleDone,
   onChangeAssignee,
-  onLongPress,
+  onDelete,
 }: AllViewProps) {
   if (loading) {
     return (
@@ -520,20 +518,20 @@ function AllAssignmentsView({
             : [];
           const assignee = a.assignedTo ? assigneeById.get(a.assignedTo) : null;
           return (
-            <FlatAssignmentRow
-              key={a.id}
-              assignment={a}
-              isPlaceholder={isPlaceholder}
-              foodName={foodName}
-              categoryLabels={categoryLabels}
-              slotLabel={
-                slotInfo ? `${slotInfo.emoji} ${slotInfo.shortLabel}` : '(סעודה נמחקה)'
-              }
-              assigneeName={assignee?.name ?? null}
-              onToggleDone={() => onToggleDone(a)}
-              onChangeAssignee={() => onChangeAssignee(a, foodName)}
-              onLongPress={() => onLongPress(a, foodName)}
-            />
+            <SwipeToDeleteRow key={a.id} onDelete={() => onDelete(a)}>
+              <FlatAssignmentRow
+                assignment={a}
+                isPlaceholder={isPlaceholder}
+                foodName={foodName}
+                categoryLabels={categoryLabels}
+                slotLabel={
+                  slotInfo ? `${slotInfo.emoji} ${slotInfo.shortLabel}` : '(סעודה נמחקה)'
+                }
+                assigneeName={assignee?.name ?? null}
+                onToggleDone={() => onToggleDone(a)}
+                onChangeAssignee={() => onChangeAssignee(a, foodName)}
+              />
+            </SwipeToDeleteRow>
           );
         })
       )}
@@ -558,7 +556,7 @@ type SingleViewProps = {
   onAdd: () => void;
   onToggleDone: (a: Assignment) => void;
   onChangeAssignee: (a: Assignment, foodName: string) => void;
-  onLongPress: (a: Assignment, foodName: string) => void;
+  onDelete: (a: Assignment) => void;
 };
 
 function SingleSlotView({
@@ -570,7 +568,7 @@ function SingleSlotView({
   onAdd,
   onToggleDone,
   onChangeAssignee,
-  onLongPress,
+  onDelete,
 }: SingleViewProps) {
   if (!slot) {
     return <Text style={styles.loadingText}>סעודה לא נמצאה</Text>;
@@ -616,16 +614,16 @@ function SingleSlotView({
               : 'קטגוריה לא ידועה'
             : (food?.name ?? '(מאכל נמחק)');
           return (
-            <AssignmentRow
-              key={a.id}
-              assignment={a}
-              isPlaceholder={isPlaceholder}
-              foodName={foodName}
-              assigneeName={assignee?.name ?? null}
-              onToggleDone={() => onToggleDone(a)}
-              onChangeAssignee={() => onChangeAssignee(a, foodName)}
-              onLongPress={() => onLongPress(a, foodName)}
-            />
+            <SwipeToDeleteRow key={a.id} onDelete={() => onDelete(a)}>
+              <AssignmentRow
+                assignment={a}
+                isPlaceholder={isPlaceholder}
+                foodName={foodName}
+                assigneeName={assignee?.name ?? null}
+                onToggleDone={() => onToggleDone(a)}
+                onChangeAssignee={() => onChangeAssignee(a, foodName)}
+              />
+            </SwipeToDeleteRow>
           );
         })
       )}
@@ -648,7 +646,6 @@ type AssignmentRowProps = {
   assigneeName: string | null;
   onToggleDone: () => void;
   onChangeAssignee: () => void;
-  onLongPress: () => void;
 };
 
 function AssignmentRow({
@@ -658,7 +655,6 @@ function AssignmentRow({
   assigneeName,
   onToggleDone,
   onChangeAssignee,
-  onLongPress,
 }: AssignmentRowProps) {
   const isAssignedNotDone = !!assignment.assignedTo && !assignment.done;
   return (
@@ -682,7 +678,6 @@ function AssignmentRow({
 
       <Pressable
         onPress={onChangeAssignee}
-        onLongPress={onLongPress}
         style={({ pressed }) => [styles.rowMain, { opacity: pressed ? 0.6 : 1 }]}
       >
         <Text style={[styles.foodName, assignment.done && styles.foodNameDone]}>
@@ -699,6 +694,9 @@ function AssignmentRow({
           </Text>
           <Text style={styles.chevron}>›</Text>
         </View>
+        {assignment.note ? (
+          <Text style={styles.noteText}>📝 {assignment.note}</Text>
+        ) : null}
       </Pressable>
     </View>
   );
@@ -713,7 +711,6 @@ type FlatRowProps = {
   assigneeName: string | null;
   onToggleDone: () => void;
   onChangeAssignee: () => void;
-  onLongPress: () => void;
 };
 
 function FlatAssignmentRow({
@@ -725,7 +722,6 @@ function FlatAssignmentRow({
   assigneeName,
   onToggleDone,
   onChangeAssignee,
-  onLongPress,
 }: FlatRowProps) {
   const isAssignedNotDone = !!assignment.assignedTo && !assignment.done;
   return (
@@ -749,7 +745,6 @@ function FlatAssignmentRow({
 
       <Pressable
         onPress={onChangeAssignee}
-        onLongPress={onLongPress}
         style={({ pressed }) => [styles.rowMain, { opacity: pressed ? 0.6 : 1 }]}
       >
         <Text style={[styles.foodName, assignment.done && styles.foodNameDone]}>
@@ -776,6 +771,9 @@ function FlatAssignmentRow({
           </Text>
           <Text style={styles.chevron}>›</Text>
         </View>
+        {assignment.note ? (
+          <Text style={styles.noteText}>📝 {assignment.note}</Text>
+        ) : null}
       </Pressable>
     </View>
   );
@@ -993,6 +991,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     color: colors.textMuted,
     fontFamily: fontFamily.regular,
+  },
+  noteText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: 2,
   },
   addRow: {
     flexDirection: 'row',
