@@ -8,7 +8,12 @@ import { AddFoodModal } from './AddFoodModal';
 import { CategoryTabs, type CategorySubTab } from './CategoryTabs';
 import { PrimaryButton } from './PrimaryButton';
 import { FoodCardSkeleton } from './Skeleton';
+import { SlotPickerModal } from './SlotPickerModal';
+import { useToast } from './Toast';
+import { useUser } from '../context/UserContext';
+import { useAssignments } from '../hooks/useAssignments';
 import { useFoods } from '../hooks/useFoods';
+import { createAssignment } from '../services/assignments';
 import { cloudinaryThumbnail } from '../services/cloudinary';
 import { removeCustomCategory } from '../services/groups';
 import {
@@ -19,6 +24,7 @@ import {
 import { colors, fontFamily, fontSize, radius, spacing } from '../theme';
 import {
   getAllCategories,
+  getAllSlots,
   getFoodCategories,
   sortFoods,
   type CategoryInfo,
@@ -33,14 +39,20 @@ type Props = {
 
 export function FoodsTab({ group }: Props) {
   const groupId = group.id;
+  const { uid } = useUser();
+  const { showToast } = useToast();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { foods, loading, error } = useFoods(groupId);
+  const { assignments } = useAssignments(groupId);
   const [foodModalVisible, setFoodModalVisible] = useState(false);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<CategorySubTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewModeState] = useState<FoodsViewMode>('list');
+  const [assigningFood, setAssigningFood] = useState<Food | null>(null);
+
+  const slots = useMemo(() => getAllSlots(group), [group]);
 
   useEffect(() => {
     getFoodsViewMode().then(setViewModeState);
@@ -98,6 +110,31 @@ export function FoodsTab({ group }: Props) {
 
   const handleOpenFood = (food: Food) => {
     navigation.navigate('FoodDetail', { groupId, foodId: food.id });
+  };
+
+  const handleLongPressFood = (food: Food) => {
+    setAssigningFood(food);
+  };
+
+  const handlePickSlotForFood = async (slotKey: string, slotLabel: string) => {
+    const food = assigningFood;
+    if (!food) return;
+    setAssigningFood(null);
+    // Skip if already assigned to this slot — creating a duplicate adds
+    // visual noise and confuses people who long-pressed by accident.
+    const alreadyAssigned = assignments.some(
+      (a) => a.foodId === food.id && a.slot === slotKey,
+    );
+    if (alreadyAssigned) {
+      showToast(`"${food.name}" כבר משובץ ל${slotLabel}`, 'info');
+      return;
+    }
+    try {
+      await createAssignment({ groupId, foodId: food.id, slot: slotKey, uid });
+      showToast(`"${food.name}" שובץ ל${slotLabel}`);
+    } catch {
+      crossAlert('אופס', 'לא הצלחנו לשבץ. נסה שוב.');
+    }
   };
 
   const handleLongPressCategory = (cat: CategoryInfo) => {
@@ -247,6 +284,7 @@ export function FoodsTab({ group }: Props) {
                   items={items}
                   viewMode={viewMode}
                   onOpenFood={handleOpenFood}
+                  onLongPressFood={handleLongPressFood}
                 />
               </View>
             );
@@ -271,6 +309,7 @@ export function FoodsTab({ group }: Props) {
                   items={items}
                   viewMode={viewMode}
                   onOpenFood={handleOpenFood}
+                  onLongPressFood={handleLongPressFood}
                 />
               )}
             </View>
@@ -294,6 +333,21 @@ export function FoodsTab({ group }: Props) {
         groupId={groupId}
         onClose={() => setCategoryModalVisible(false)}
       />
+
+      <SlotPickerModal
+        visible={assigningFood !== null}
+        slots={slots}
+        title={
+          assigningFood
+            ? `לשבץ את "${assigningFood.name}" לאיזו ארוחה?`
+            : undefined
+        }
+        helper="המאכל יתווסף לארוחה שתבחר ללא שיבוץ אדם"
+        onPick={(slot) => {
+          void handlePickSlotForFood(slot.key, slot.label);
+        }}
+        onClose={() => setAssigningFood(null)}
+      />
     </View>
   );
 }
@@ -302,10 +356,12 @@ function FoodList({
   items,
   viewMode,
   onOpenFood,
+  onLongPressFood,
 }: {
   items: Food[];
   viewMode: FoodsViewMode;
   onOpenFood: (food: Food) => void;
+  onLongPressFood: (food: Food) => void;
 }) {
   if (viewMode === 'gallery') {
     return (
@@ -315,6 +371,7 @@ function FoodList({
             key={food.id}
             food={food}
             onPress={() => onOpenFood(food)}
+            onLongPress={() => onLongPressFood(food)}
           />
         ))}
       </View>
@@ -327,13 +384,22 @@ function FoodList({
           key={food.id}
           food={food}
           onPress={() => onOpenFood(food)}
+          onLongPress={() => onLongPressFood(food)}
         />
       ))}
     </>
   );
 }
 
-function FoodRow({ food, onPress }: { food: Food; onPress: () => void }) {
+function FoodRow({
+  food,
+  onPress,
+  onLongPress,
+}: {
+  food: Food;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
   const hasDetails =
     !!food.recipe?.trim() ||
     !!food.notes?.trim() ||
@@ -344,6 +410,8 @@ function FoodRow({ food, onPress }: { food: Food; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
       style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
     >
       {thumbUrl ? (
@@ -372,13 +440,23 @@ function FoodRow({ food, onPress }: { food: Food; onPress: () => void }) {
   );
 }
 
-function GalleryCard({ food, onPress }: { food: Food; onPress: () => void }) {
+function GalleryCard({
+  food,
+  onPress,
+  onLongPress,
+}: {
+  food: Food;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
   const thumbUrl = food.images?.[0]
     ? cloudinaryThumbnail(food.images[0], 400)
     : null;
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
       style={({ pressed }) => [styles.galleryCard, { opacity: pressed ? 0.7 : 1 }]}
     >
       {thumbUrl ? (

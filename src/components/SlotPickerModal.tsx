@@ -15,9 +15,18 @@ type Props = {
   slots: SlotInfo[];
   onPick: (slot: SlotInfo) => void;
   onClose: () => void;
+  title?: string;
+  helper?: string;
 };
 
-export function SlotPickerModal({ visible, slots, onPick, onClose }: Props) {
+export function SlotPickerModal({
+  visible,
+  slots,
+  onPick,
+  onClose,
+  title = 'לאיזו ארוחה להוסיף?',
+  helper = 'בחר ארוחה ואז תוכל לבחור מאכל מהקטלוג',
+}: Props) {
   return (
     <Modal
       visible={visible}
@@ -28,8 +37,8 @@ export function SlotPickerModal({ visible, slots, onPick, onClose }: Props) {
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
-          <Text style={styles.title}>לאיזו ארוחה להוסיף?</Text>
-          <Text style={styles.helper}>בחר ארוחה ואז תוכל לבחור מאכל מהקטלוג</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.helper}>{helper}</Text>
 
           <ScrollView
             style={styles.list}
